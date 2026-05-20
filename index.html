@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberSec Lab — Forensics Terminal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text y='22' x='4' font-size='18' fill='%233fb950'>$_</text></svg>">
+</head>
+<body>
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">$_</span>
+          <div>
+            <div class="logo-title">CyberSec Lab</div>
+            <div class="logo-sub">Forensics Terminal v3.0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">servidor</div>
+        <div class="server-info">
+          <div class="server-row">
+            <span class="s-key">host</span>
+            <span class="s-val">192.168.0.10</span>
+          </div>
+          <div class="server-row">
+            <span class="s-key">user</span>
+            <span class="s-val green">root</span>
+          </div>
+          <div class="server-row">
+            <span class="s-key">uptime</span>
+            <span class="s-val" id="sb-uptime">9d 3h</span>
+          </div>
+          <div class="server-row">
+            <span class="s-key">status</span>
+            <span class="s-val" id="sb-status">online</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">investigação</div>
+        <div class="meter-row">
+          <span class="m-key">tempo</span>
+          <span class="m-val" id="sb-timer">00:00</span>
+        </div>
+        <div class="meter-row">
+          <span class="m-key">comandos</span>
+          <span class="m-val" id="sb-cmds">0</span>
+        </div>
+        <div class="meter-row">
+          <span class="m-key">cobertura</span>
+          <span class="m-val" id="sb-coverage">0%</span>
+        </div>
+        <div class="meter-row">
+          <span class="m-key">IoCs</span>
+          <span class="m-val red" id="sb-iocs">0</span>
+        </div>
+        <div class="meter-row">
+          <span class="m-key">dicas</span>
+          <span class="m-val yellow" id="sb-hints">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">painéis</div>
+        <button class="sb-btn" onclick="switchPanel('playbook')">
+          <span class="sb-btn-icon">📋</span> Playbook
+        </button>
+        <button class="sb-btn" onclick="switchPanel('notes')">
+          <span class="sb-btn-icon">📝</span> Notes
+          <span class="sb-badge" id="notes-badge" style="display:none">0</span>
+        </button>
+        <button class="sb-btn" onclick="switchPanel('ioc')">
+          <span class="sb-btn-icon">⚠</span> IoC
+          <span class="sb-badge red-badge" id="ioc-badge" style="display:none">0</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">ações rápidas</div>
+        <button class="sb-btn yellow-btn" onclick="runCmd('hint')">💡 Pedir dica</button>
+        <button class="sb-btn" onclick="runCmd('score')">📊 Ver score</button>
+        <button class="sb-btn" onclick="runCmd('report')">📄 Relatório</button>
+        <button class="sb-btn dim-btn" onclick="runCmd('clear')">✕ Limpar tela</button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">nova sessão</div>
+        <button class="sb-btn green-btn" onclick="newSession()">▶ Novo cenário</button>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <main class="main">
+      <!-- Top bar -->
+      <div class="topbar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="toggle sidebar">☰</button>
+        <div class="topbar-tabs">
+          <button class="ttab active" id="ttab-terminal" onclick="showTab('terminal')">Terminal</button>
+          <button class="ttab" id="ttab-panel" onclick="showTab('panel')">Painel</button>
+        </div>
+        <div class="topbar-right">
+          <span class="conn-badge green" id="conn-badge">● conectado</span>
+          <span class="timer-badge" id="top-timer">00:00</span>
+        </div>
+      </div>
+
+      <!-- Terminal tab -->
+      <div class="tab-content" id="tab-terminal">
+        <!-- SSH titlebar -->
+        <div class="ssh-bar">
+          <div class="win-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="ssh-label">root@forensics-lab — ssh 192.168.0.10 — bash</span>
+          <span class="ssh-right" id="ssh-alert"></span>
+        </div>
+
+        <!-- Pane tabs (tmux-style) -->
+        <div class="pane-tabbar" id="pane-tabbar">
+          <!-- tabs injected by JS -->
+          <button class="pane-add-btn" id="pane-add-btn" onclick="addPane()" title="novo terminal (máx 3)">+</button>
+        </div>
+
+        <!-- Pane outputs — one div per tab, swap on switch -->
+        <div id="pane-outputs"></div>
+
+        <!-- Quick commands -->
+        <div class="quickbar" id="quickbar">
+          <div class="qgroup">
+            <span class="qgroup-label">tráfego</span>
+            <button class="qbtn" onclick="runCmd('nload')">nload</button>
+            <button class="qbtn" onclick="runCmd('iftop')">iftop</button>
+            <button class="qbtn" onclick="runCmd('nethogs')">nethogs</button>
+            <button class="qbtn" onclick="runCmd('tcpdump -n -c 15')">tcpdump</button>
+          </div>
+          <div class="qgroup">
+            <span class="qgroup-label">sistema</span>
+            <button class="qbtn" onclick="runCmd('top')">top</button>
+            <button class="qbtn" onclick="runCmd('vmstat')">vmstat</button>
+            <button class="qbtn" onclick="runCmd('iostat')">iostat</button>
+            <button class="qbtn" onclick="runCmd('dmesg | tail')">dmesg</button>
+          </div>
+          <div class="qgroup">
+            <span class="qgroup-label">rede</span>
+            <button class="qbtn" onclick="runCmd('netstat -an')">netstat</button>
+            <button class="qbtn" onclick="runCmd('ss -s')">ss -s</button>
+            <button class="qbtn" onclick="runCmd('nmap')">nmap</button>
+            <button class="qbtn" onclick="runCmd('iptables -nvL')">iptables</button>
+          </div>
+          <div class="qgroup">
+            <span class="qgroup-label">logs</span>
+            <button class="qbtn" onclick="runCmd('tail -f /var/log/nginx/access.log')">nginx.log</button>
+            <button class="qbtn" onclick="runCmd('tail -f /var/log/auth.log')">auth.log</button>
+            <button class="qbtn" onclick="runCmd('tail -f /var/log/syslog')">syslog</button>
+          </div>
+          <div class="qgroup">
+            <span class="qgroup-label">investigar</span>
+            <button class="qbtn" onclick="promptWhois()">whois</button>
+            <button class="qbtn" onclick="promptGeoip()">geoip</button>
+            <button class="qbtn" onclick="promptAbuse()">abuse</button>
+            <button class="qbtn" onclick="promptDig()">dig</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel tab (mobile) -->
+      <div class="tab-content hidden" id="tab-panel">
+        <div class="panel-wrap" id="panel-wrap">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Side panel (desktop) -->
+    <div class="side-panel" id="side-panel">
+      <div class="sp-tabs">
+        <button class="sptab active" id="sptab-playbook" onclick="switchPanel('playbook')">Playbook</button>
+        <button class="sptab" id="sptab-notes" onclick="switchPanel('notes')">Notes</button>
+        <button class="sptab" id="sptab-ioc" onclick="switchPanel('ioc')">IoC</button>
+      </div>
+      <div class="sp-content" id="sp-content"></div>
+      <div class="sp-guess" id="sp-guess"></div>
+    </div>
+  </div>
+
+  <script src="js/scenarios.js"></script>
+  <script src="js/commands.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
