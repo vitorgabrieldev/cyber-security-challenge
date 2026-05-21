@@ -1,306 +1,548 @@
+/* ─────────────────────────────────────────────
+   CyberSec Lab — Kali Linux Desktop Theme
+   ───────────────────────────────────────────── */
+
 :root {
-  --bg0: #0d1117;
-  --bg1: #161b22;
-  --bg2: #21262d;
-  --bg3: #30363d;
-  --border: #30363d;
-  --border2: #21262d;
-  --text: #e6edf3;
-  --dim: #8b949e;
-  --dim2: #484f58;
-  --green: #3fb950;
-  --red: #f85149;
-  --yellow: #d29922;
-  --blue: #79c0ff;
-  --purple: #bc8cff;
-  --orange: #ffa657;
-  --cyan: #39d353;
-  --mono: 'Courier New', Courier, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --radius: 8px;
-  --radius-lg: 12px;
+  /* Kali palette */
+  --k-red:    #e84040;
+  --k-green:  #48d860;
+  --k-blue:   #5890ff;
+  --k-cyan:   #40d8b0;
+  --k-yellow: #f0c040;
+  --k-purple: #b060f0;
+  --k-dim:    #7060a0;
+  --k-white:  #d8d4f0;
+  --k-orange: #f09050;
+
+  /* Panel / UI chrome */
+  --panel-bg:    rgba(16, 12, 26, 0.96);
+  --panel-text:  #c8c0e0;
+  --panel-dim:   #7868a8;
+  --panel-hover: rgba(120, 80, 200, 0.25);
+  --panel-sep:   rgba(120, 80, 200, 0.25);
+
+  /* Terminal window */
+  --win-bg:       #0d0b16;
+  --win-titlebar: #1a1630;
+  --win-border:   #2e2550;
+  --win-tab-bg:   #120f22;
+  --win-tab-act:  #0d0b16;
+
+  /* Terminal content */
+  --term-bg:   #0d0b16;
+  --term-text: #d4d0ec;
+  --term-dim:  #6860a0;
+
+  --mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --ui:   system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { height: 100%; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--sans); }
-
-/* ── Layout ── */
-.app { display: flex; height: 100vh; overflow: hidden; }
-
-/* ── Sidebar ── */
-.sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: var(--bg1);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  transition: width 0.2s, min-width 0.2s;
-  z-index: 10;
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: var(--ui);
+  background: #0d0b16;
 }
-.sidebar.collapsed { width: 0; min-width: 0; overflow: hidden; }
-.sidebar::-webkit-scrollbar { width: 3px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
 
-.sidebar-header { padding: 16px 14px 12px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
-.logo { display: flex; align-items: center; gap: 10px; }
-.logo-icon { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--green); width: 36px; height: 36px; background: #0a1f10; border: 1px solid #1a3f20; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.logo-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.logo-sub { font-size: 10px; color: var(--dim); }
-
-.sidebar-section { padding: 12px 14px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
-.sidebar-label { font-size: 9px; font-weight: 600; color: var(--dim2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
-
-.server-info { display: flex; flex-direction: column; gap: 4px; }
-.server-row { display: flex; justify-content: space-between; align-items: center; }
-.s-key { font-size: 11px; color: var(--dim); font-family: var(--mono); }
-.s-val { font-size: 11px; color: var(--text); font-family: var(--mono); }
-
-.meter-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.m-key { font-size: 11px; color: var(--dim); }
-.m-val { font-size: 11px; font-weight: 600; color: var(--text); font-family: var(--mono); }
-
-.sb-btn {
-  display: flex; align-items: center; gap: 6px; width: 100%;
-  background: transparent; border: 1px solid var(--border2);
-  color: var(--dim); font-size: 11px; padding: 6px 10px;
-  border-radius: var(--radius); cursor: pointer; margin-bottom: 4px;
-  font-family: var(--mono); transition: all 0.15s; text-align: left;
+/* ── Desktop ─────────────────────────────── */
+.kali-desktop {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
 }
-.sb-btn:hover { background: var(--bg2); color: var(--text); border-color: var(--border); }
-.sb-btn-icon { font-size: 12px; }
-.sb-badge { background: var(--bg3); color: var(--dim); font-size: 9px; padding: 1px 5px; border-radius: 10px; margin-left: auto; }
-.red-badge { background: #200d0d; color: var(--red); }
-.yellow-btn { border-color: #2a2000; color: var(--yellow); }
-.yellow-btn:hover { background: #1a1400; color: var(--yellow); border-color: var(--yellow); }
-.green-btn { border-color: #0a1f10; color: var(--green); }
-.green-btn:hover { background: #0a1f10; border-color: var(--green); }
-.dim-btn { color: var(--dim2); }
 
-/* ── Main ── */
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-
-/* ── Topbar ── */
-.topbar {
-  background: var(--bg1); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 8px; padding: 0 12px;
-  height: 42px; flex-shrink: 0;
-}
-.sidebar-toggle { background: none; border: none; color: var(--dim); font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 4px; line-height: 1; }
-.sidebar-toggle:hover { color: var(--text); background: var(--bg2); }
-.topbar-tabs { display: flex; gap: 2px; }
-.ttab { background: none; border: none; color: var(--dim); font-size: 12px; padding: 6px 12px; cursor: pointer; border-radius: var(--radius); font-family: var(--mono); transition: all 0.15s; }
-.ttab:hover { color: var(--text); background: var(--bg2); }
-.ttab.active { color: var(--text); background: var(--bg2); }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.conn-badge { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 10px; }
-.conn-badge.green { background: #0a1f10; color: var(--green); border: 1px solid #1a3f20; }
-.conn-badge.red { background: #200d0d; color: var(--red); border: 1px solid #3f1a1a; }
-.conn-badge.yellow { background: #1a1400; color: var(--yellow); border: 1px solid #3f3000; }
-.timer-badge { font-size: 11px; color: var(--dim); font-family: var(--mono); background: var(--bg2); padding: 2px 8px; border-radius: var(--radius); border: 1px solid var(--border2); }
-
-/* ── Tab content ── */
-.tab-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.tab-content.hidden { display: none; }
-
-/* ── SSH bar ── */
-.ssh-bar {
-  background: var(--bg1); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px; padding: 7px 14px;
+/* ── Top Panel ────────────────────────────── */
+.kali-panel {
+  height: 28px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--panel-sep);
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
   flex-shrink: 0;
-}
-.win-dots { display: flex; gap: 5px; }
-.dot { width: 11px; height: 11px; border-radius: 50%; }
-.dot.red { background: #ff5f57; }
-.dot.yellow { background: #febc2e; }
-.dot.green { background: #28c840; }
-.ssh-label { font-size: 11px; color: var(--dim); font-family: var(--mono); flex: 1; text-align: center; }
-.ssh-right { font-size: 10px; font-family: var(--mono); color: var(--red); font-weight: 600; }
-
-/* ── Pane tab bar (tmux-style) ── */
-.pane-tabbar {
-  background: var(--bg1); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 0; flex-shrink: 0; min-height: 30px;
-  overflow-x: auto;
-}
-.pane-tabbar::-webkit-scrollbar { height: 0; }
-.pane-tab {
-  display: flex; align-items: center; gap: 5px;
-  padding: 5px 12px; font-size: 11px; font-family: var(--mono);
-  color: var(--dim); background: transparent; border: none;
-  border-right: 1px solid var(--border2); cursor: pointer;
-  white-space: nowrap; transition: all 0.1s; min-height: 30px;
+  z-index: 200;
   user-select: none;
 }
-.pane-tab:hover { color: var(--text); background: var(--bg2); }
-.pane-tab.active { color: var(--text); background: var(--bg0); border-bottom: 2px solid var(--green); }
-.pane-close {
-  font-size: 13px; line-height: 1; color: var(--dim2);
-  background: none; border: none; cursor: pointer; padding: 0 2px;
-  border-radius: 3px; transition: all 0.1s;
-}
-.pane-close:hover { color: var(--red); background: #200d0d; }
-.pane-add-btn {
-  padding: 5px 10px; font-size: 16px; line-height: 1;
-  color: var(--dim); background: transparent; border: none;
-  border-right: 1px solid var(--border2); cursor: pointer;
-  transition: all 0.1s; min-height: 30px; font-weight: 300;
-}
-.pane-add-btn:hover { color: var(--green); background: var(--bg2); }
 
-/* Pane output containers */
-#pane-outputs { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.kp-left  { display: flex; align-items: center; gap: 2px; }
+.kp-right { display: flex; align-items: center; gap: 8px; }
 
-/* Live monitoring container — refreshed in place */
-.live-container {
-  border: 1px solid var(--border2); border-radius: var(--radius);
-  padding: 8px 10px; margin: 4px 0;
-  background: var(--bg1);
+.kali-logo { display: flex; align-items: center; margin-right: 4px; opacity: 0.9; }
+
+.kp-appbtn {
+  font-size: 12px; color: var(--panel-text);
+  padding: 0 8px; height: 28px; display: flex; align-items: center;
+  cursor: pointer; border-radius: 3px; transition: background 0.12s;
+  font-weight: 500;
+}
+.kp-appbtn:hover, .kp-appbtn.active { background: var(--panel-hover); }
+
+.kp-menu-dim {
+  font-size: 12px; color: var(--panel-dim);
+  padding: 0 8px; height: 28px; display: flex; align-items: center;
+  cursor: pointer;
+}
+.kp-menu-dim:hover { background: var(--panel-hover); border-radius: 3px; }
+
+.kp-net     { font-size: 11px; color: var(--panel-dim); font-family: var(--mono); }
+.kp-sep     { width: 1px; height: 14px; background: var(--panel-sep); }
+.kp-clock   { font-size: 12px; color: var(--panel-text); font-family: var(--mono); font-weight: 500; }
+.kp-user    { font-size: 12px; color: var(--k-green); font-family: var(--mono); font-weight: 600; }
+.kp-sysinfo { font-size: 10px; color: var(--panel-dim); font-family: var(--mono); white-space: nowrap; cursor: default; letter-spacing: -0.01em; }
+
+/* ── Applications Launcher ─────────────────── */
+.app-launcher {
+  position: fixed; left: 0;
+  background: rgba(18, 14, 32, 0.97);
+  border: 1px solid var(--win-border);
+  border-top: none;
+  border-radius: 0 0 6px 0;
+  padding: 6px 0;
+  min-width: 200px;
+  z-index: 300;
+  backdrop-filter: blur(14px);
+  box-shadow: 4px 4px 20px rgba(0,0,0,0.6);
+  transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+  opacity: 1; visibility: visible;
+  transform: translateY(0);
+}
+.app-launcher.hidden {
+  opacity: 0; visibility: hidden;
+  pointer-events: none; transform: translateY(-6px);
 }
 
-/* ── Terminal output ── */
+.al-section-label {
+  font-size: 9px; color: var(--panel-dim);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 16px 2px;
+}
+.al-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px; font-size: 12px; color: var(--panel-text);
+  cursor: pointer; transition: background 0.1s;
+}
+.al-item:hover { background: var(--panel-hover); }
+.al-icon { width: 18px; height: 18px; object-fit: contain; }
+.al-icon-emoji { font-size: 16px; width: 18px; text-align: center; }
+.al-danger { color: var(--k-red); }
+.al-divider { height: 1px; background: var(--panel-sep); margin: 4px 0; }
+
+/* ── Workspace ───────────────────────────── */
+.kali-workspace {
+  flex: 1; position: relative; overflow: hidden;
+}
+
+/* Windows layer */
+#win-layer { position: absolute; inset: 0; pointer-events: none; }
+#win-layer > * { pointer-events: all; }
+
+/* ── Desktop Selection Rectangle ─────────── */
+.desktop-select-rect {
+  position: absolute;
+  border: 1px solid rgba(88, 144, 255, 0.75);
+  background: rgba(88, 144, 255, 0.18);
+  pointer-events: none;
+  z-index: 8;
+  display: none;
+  border-radius: 2px;
+}
+
+/* ── Desktop Icons ────────────────────────── */
+.desktop-icons {
+  position: absolute; top: 14px; right: 16px;
+  display: flex; flex-direction: column; gap: 6px;
+  z-index: 5;
+}
+#desktop-icons-left { right: auto; left: 16px; }
+.d-icon {
+  display: flex; flex-direction: column; align-items: center;
+  width: 76px; padding: 6px 4px;
+  cursor: pointer; border-radius: 6px;
+  user-select: none; transition: background 0.12s;
+}
+.d-icon:hover { background: rgba(120,80,200,0.28); }
+.d-icon.selected { background: rgba(90,60,180,0.5); outline: 1px solid rgba(120,90,220,0.7); }
+.d-icon-gfx   { font-size: 36px; line-height: 1; margin-bottom: 4px; }
+.d-icon-png   { width: 40px; height: 40px; object-fit: contain; margin-bottom: 4px; }
+.d-icon-name  {
+  font-size: 11px; color: #fff;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+  text-align: center; word-break: break-word; line-height: 1.3;
+}
+
+/* ── Window Open/Close Animations ────────── */
+@keyframes win-open  {
+  from { opacity: 0; transform: scale(0.94) translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes win-close {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.94); }
+}
+
+/* ── Terminal Window ─────────────────────── */
+.term-window {
+  position: absolute;
+  display: flex; flex-direction: column;
+  background: var(--win-bg);
+  border: 1px solid var(--win-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(80,50,140,0.3);
+  min-width: 400px; min-height: 200px;
+  resize: both;
+  animation: win-open 0.18s ease-out;
+}
+.term-window.focused {
+  border-color: rgba(90,60,160,0.7);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(100,60,180,0.5);
+}
+.term-window.minimized { display: none; }
+.term-window.closing   { animation: win-close 0.15s ease-in forwards; }
+
+/* titlebar */
+.tw-titlebar {
+  height: 34px; flex-shrink: 0;
+  background: var(--win-titlebar);
+  display: flex; align-items: center;
+  padding: 0 8px; gap: 6px;
+  cursor: move;
+  border-bottom: 1px solid rgba(80,50,140,0.3);
+  user-select: none;
+}
+
+/* ── Window Buttons — Linux / XFCE style ─── */
+.win-btns {
+  display: flex; gap: 3px; flex-shrink: 0; margin-left: auto;
+}
+.win-btn {
+  width: 22px; height: 20px; border-radius: 3px;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  background: rgba(50, 40, 75, 0.5);
+  border: 1px solid rgba(80, 60, 120, 0.35);
+  color: #6858a0;
+  transition: all 0.1s;
+  user-select: none;
+}
+.win-btn:hover { background: rgba(80, 65, 125, 0.6); color: var(--k-white); border-color: rgba(110, 85, 160, 0.55); }
+.wbtn-close:hover { background: rgba(200, 45, 45, 0.8); border-color: rgba(200, 50, 50, 0.9); color: #fff; }
+
+.tw-title {
+  flex: 1; text-align: left;
+  font-size: 12px; color: #a898d8;
+  font-family: var(--mono); pointer-events: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding-left: 2px;
+}
+
+/* pane tab bar */
+.tw-pane-bar {
+  height: 28px; flex-shrink: 0;
+  background: var(--win-tab-bg);
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid rgba(60,40,100,0.4);
+  overflow-x: auto;
+}
+.tw-pane-bar::-webkit-scrollbar { height: 0; }
+.tw-pane-tab {
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 12px; font-size: 11px; font-family: var(--mono);
+  color: var(--term-dim); background: transparent; border: none;
+  border-right: 1px solid rgba(60,40,100,0.3);
+  cursor: pointer; white-space: nowrap;
+  transition: color 0.1s, background 0.1s;
+  user-select: none;
+}
+.tw-pane-tab:hover { color: var(--term-text); }
+.tw-pane-tab.active { color: var(--term-text); background: var(--win-tab-act); border-bottom: 2px solid var(--k-green); }
+.tw-pane-close {
+  font-size: 12px; color: var(--term-dim); background: none; border: none;
+  cursor: pointer; padding: 0 2px; border-radius: 3px; line-height: 1;
+}
+.tw-pane-close:hover { color: var(--k-red); }
+.tw-pane-add {
+  padding: 0 10px; font-size: 18px; font-weight: 300;
+  color: var(--term-dim); background: transparent; border: none;
+  border-right: 1px solid rgba(60,40,100,0.3);
+  cursor: pointer; line-height: 1; display: flex; align-items: center;
+}
+.tw-pane-add:hover { color: var(--k-green); }
+
+/* window body */
+.tw-body {
+  flex: 1; overflow: hidden;
+  position: relative;
+  background: var(--term-bg);
+}
+
+/* resize handle decoration */
+.term-window::after {
+  content: '';
+  position: absolute; bottom: 3px; right: 3px;
+  width: 10px; height: 10px;
+  background: linear-gradient(135deg, transparent 50%, rgba(100,70,180,0.4) 50%);
+  pointer-events: none;
+}
+
+/* ── Terminal Output ─────────────────────── */
 .terminal-out {
-  flex: 1; overflow-y: auto; padding: 12px 16px;
-  font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
-  color: var(--text); background: var(--bg0);
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 13px; line-height: 1.6;
+  color: var(--term-text);
+  background: var(--term-bg);
 }
 .terminal-out::-webkit-scrollbar { width: 4px; }
 .terminal-out::-webkit-scrollbar-track { background: transparent; }
-.terminal-out::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+.terminal-out::-webkit-scrollbar-thumb { background: rgba(80,60,140,0.5); border-radius: 2px; }
 
-.t-line { display: block; min-height: 1.65em; }
-
-/* ── Inline terminal input (prompt embutido no output) ── */
+.t-line { display: block; min-height: 1.6em; }
 .t-input-line { display: flex; align-items: center; }
+.t-prompt-pre { display: block; }
+
 .inline-prompt { white-space: pre; flex-shrink: 0; }
+
 .terminal-inline-input {
   flex: 1; min-width: 2ch;
   background: transparent; border: none; outline: none;
-  font-size: 12.5px; color: var(--text); font-family: var(--mono);
-  line-height: 1.65; caret-color: var(--green);
+  font-size: 13px; color: var(--term-text);
+  font-family: var(--mono); line-height: 1.6;
+  caret-color: var(--k-green);
 }
 
-/* ── Quickbar ── */
-.quickbar {
-  background: var(--bg1); border-top: 1px solid var(--border);
-  padding: 8px 14px; display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0;
+.cmd-echo { color: var(--k-cyan); }
+
+.live-container {
+  border: 1px solid rgba(60,40,100,0.4);
+  border-radius: 4px; padding: 6px 8px;
+  margin: 4px 0; background: rgba(0,0,0,0.2);
 }
-.qgroup { display: flex; align-items: center; gap: 4px; }
-.qgroup-label { font-size: 9px; color: var(--dim2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 2px; }
-.qbtn {
-  font-size: 10px; padding: 3px 8px; background: var(--bg2);
-  border: 1px solid var(--border2); color: var(--dim);
-  border-radius: 4px; cursor: pointer; font-family: var(--mono);
-  transition: all 0.1s;
+
+/* ── Kali Prompt Colors ──────────────────── */
+.kp-bracket { color: var(--k-purple); }
+.kp-user    { color: var(--k-red); font-weight: 700; }
+.kp-path    { color: var(--k-blue); }
+.kp-arrow   { color: var(--k-purple); }
+.kp-hash    { color: var(--k-red); font-weight: 700; }
+
+/* Forensics-lab prompt (post-SSH) */
+.fp-user   { color: var(--k-green); font-weight: 700; }
+.fp-at     { color: var(--term-text); }
+.fp-host   { color: var(--k-green); }
+.fp-colon  { color: var(--term-text); }
+.fp-path   { color: var(--k-blue); font-weight: 600; }
+.fp-hash   { color: var(--k-red); font-weight: 700; }
+
+/* ── Terminal text colors ────────────────── */
+.green  { color: var(--k-green) !important; }
+.red    { color: var(--k-red) !important; }
+.yellow { color: var(--k-yellow) !important; }
+.blue   { color: var(--k-blue) !important; }
+.purple { color: var(--k-purple) !important; }
+.cyan   { color: var(--k-cyan) !important; }
+.orange { color: var(--k-orange) !important; }
+.dim    { color: var(--term-dim) !important; }
+.dim2   { color: rgba(100,80,150,0.6) !important; }
+.bold   { font-weight: 700 !important; }
+
+/* ── Taskbar ──────────────────────────────── */
+.kali-taskbar {
+  height: 38px; flex-shrink: 0;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--panel-sep);
+  display: flex; align-items: center;
+  padding: 0 6px; gap: 4px;
+  z-index: 200;
+  user-select: none;
 }
-.qbtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border); }
 
-/* ── Side panel ── */
-.side-panel {
-  width: 280px; min-width: 280px;
-  background: var(--bg1); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow: hidden;
+.kt-show-desktop {
+  width: 6px; height: 28px; flex-shrink: 0;
+  background: transparent;
+  border-left: 2px solid rgba(100,80,160,0.4);
+  cursor: pointer; transition: border-color 0.15s;
 }
-.sp-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.sptab {
-  flex: 1; background: none; border: none; color: var(--dim);
-  font-size: 11px; padding: 10px 4px; cursor: pointer;
-  font-family: var(--mono); border-bottom: 2px solid transparent;
-  transition: all 0.15s;
+.kt-show-desktop:hover { border-color: var(--k-green); }
+
+.kt-apps { flex: 1; display: flex; align-items: center; gap: 3px; overflow: hidden; }
+
+.kt-app-btn {
+  display: flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px;
+  background: rgba(80,60,140,0.2);
+  border: 1px solid rgba(80,60,140,0.35);
+  border-radius: 4px; color: var(--panel-text);
+  font-size: 11px; font-family: var(--mono);
+  cursor: pointer; transition: all 0.12s;
+  white-space: nowrap; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis;
 }
-.sptab:hover { color: var(--text); }
-.sptab.active { color: var(--text); border-bottom-color: var(--green); }
-.sp-content { flex: 1; overflow-y: auto; padding: 14px; font-size: 11.5px; line-height: 1.7; }
-.sp-content::-webkit-scrollbar { width: 3px; }
-.sp-content::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+.kt-app-btn:hover { background: rgba(100,80,180,0.35); border-color: rgba(120,90,200,0.5); }
+.kt-app-btn.active { background: rgba(100,80,180,0.4); border-color: rgba(140,100,220,0.6); }
+.kt-app-btn.minimized { opacity: 0.5; }
+.kt-app-icon { font-size: 13px; flex-shrink: 0; }
 
-/* Playbook */
-.pb-head { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border2); font-family: var(--mono); }
-.pb-tip { padding: 5px 0 5px 10px; border-left: 2px solid var(--bg3); color: var(--dim); margin: 3px 0; font-size: 11px; }
-.pb-tip.hi { border-left-color: var(--yellow); color: var(--text); }
-.pb-tip.ok { border-left-color: var(--green); }
-.pb-tip.wr { border-left-color: var(--red); }
-.pb-tip code { color: var(--green); font-family: var(--mono); font-size: 10px; }
-.pb-sep { height: 1px; background: var(--border2); margin: 10px 0; }
-.pb-sub { font-size: 10px; color: var(--dim2); font-family: var(--mono); margin-top: 8px; }
 
-/* Notes */
-.note-item { padding: 6px 8px; background: var(--bg2); border-radius: var(--radius); margin-bottom: 5px; font-size: 11px; color: var(--text); border-left: 2px solid var(--border); }
-.note-num { color: var(--dim); font-family: var(--mono); font-size: 9px; }
-.note-add { display: flex; gap: 6px; margin-bottom: 10px; }
-.note-add input { flex: 1; background: var(--bg0); border: 1px solid var(--border); color: var(--text); font-size: 11px; padding: 5px 8px; border-radius: var(--radius); font-family: var(--mono); outline: none; }
-.note-add input:focus { border-color: var(--green); }
-.note-add button { background: var(--bg2); border: 1px solid var(--border); color: var(--green); font-size: 11px; padding: 5px 8px; border-radius: var(--radius); cursor: pointer; font-family: var(--mono); }
-.note-add button:hover { background: #0a1f10; border-color: var(--green); }
-
-/* IoC */
-.ioc-item { padding: 5px 8px; background: #200d0d; border-radius: var(--radius); margin-bottom: 5px; font-size: 10.5px; color: var(--red); border-left: 2px solid var(--red); }
-.ioc-empty { color: var(--dim); font-size: 11px; font-family: var(--mono); }
-
-/* Guess panel */
-.sp-guess {
-  border-top: 1px solid var(--border); padding: 14px; flex-shrink: 0;
-  background: var(--bg0);
+/* ── Text Viewer (Mousepad) ──────────────── */
+.txtv-window {
+  background: #13101e;
+  border: 1px solid var(--win-border);
+  border-radius: 8px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  position: absolute; resize: both;
+  min-width: 360px; min-height: 240px;
 }
-.sp-guess-title { font-size: 10px; color: var(--dim); margin-bottom: 8px; font-family: var(--mono); }
-.guess-btns { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.gbtn {
-  font-size: 10px; padding: 4px 8px; background: var(--bg2);
-  border: 1px solid var(--border2); color: var(--dim);
-  border-radius: 4px; cursor: pointer; font-family: var(--mono); transition: all 0.1s;
+.txtv-window.win-anim { animation: win-open  0.18s ease-out; }
+.txtv-window.closing  { animation: win-close 0.15s ease-in  forwards; }
+.txtv-menubar {
+  background: #1a162c; border-bottom: 1px solid rgba(60,40,100,0.4);
+  display: flex; gap: 0; flex-shrink: 0;
 }
-.gbtn:hover { background: var(--bg3); color: var(--text); }
-.gbtn.sel { border-color: var(--blue); color: var(--blue); background: #0d2137; }
-.gbtn.correct { border-color: var(--green); color: var(--green); background: #0a1f10; }
-.gbtn.wrong { border-color: var(--red); color: var(--red); background: #200d0d; }
-.submit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.submit-btn {
-  font-size: 11px; padding: 5px 14px; background: transparent;
-  border: 1px solid var(--green); color: var(--green); border-radius: var(--radius);
-  cursor: pointer; font-family: var(--mono); transition: all 0.15s;
+.txtv-menubar span {
+  padding: 4px 12px; font-size: 12px; color: var(--panel-dim);
+  cursor: pointer; transition: background 0.1s;
 }
-.submit-btn:hover { background: #0a1f10; }
-.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.guess-feedback { font-size: 10px; font-family: var(--mono); }
+.txtv-menubar span:hover { background: var(--panel-hover); color: var(--panel-text); }
+.txtv-body {
+  flex: 1; overflow-y: auto; overflow-x: auto;
+  padding: 16px 18px;
+  font-family: var(--mono); font-size: 13px; line-height: 1.7;
+  color: #c8d0e8; background: #0f0d1a;
+  white-space: pre-wrap; word-break: break-word;
+}
+.txtv-body::-webkit-scrollbar { width: 4px; height: 4px; }
+.txtv-body::-webkit-scrollbar-thumb { background: rgba(80,60,140,0.5); border-radius: 2px; }
+.txtv-statusbar {
+  background: #1a162c; border-top: 1px solid rgba(60,40,100,0.4);
+  display: flex; gap: 16px; padding: 3px 12px; flex-shrink: 0;
+}
+.txtv-statusbar span { font-size: 10px; color: var(--panel-dim); font-family: var(--mono); }
 
-/* Mobile panel tab */
-.panel-wrap { padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; height: 100%; }
+/* ── File Manager (Thunar) ───────────────── */
+.filemgr-window {
+  background: #13101e;
+  border: 1px solid var(--win-border);
+  border-radius: 8px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  position: absolute; resize: both;
+  min-width: 320px; min-height: 220px;
+}
+.filemgr-window.win-anim { animation: win-open  0.18s ease-out; }
+.filemgr-window.closing  { animation: win-close 0.15s ease-in  forwards; }
+.filemgr-toolbar {
+  background: #1a162c; border-bottom: 1px solid rgba(60,40,100,0.4);
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px; flex-shrink: 0;
+}
+.fmt-btn {
+  font-size: 12px; color: var(--panel-dim); padding: 2px 6px;
+  background: rgba(80,60,140,0.2); border: 1px solid rgba(80,60,140,0.3);
+  border-radius: 3px; cursor: pointer;
+}
+.fmt-path { font-size: 12px; color: var(--panel-text); font-family: var(--mono); }
+.filemgr-body {
+  flex: 1; display: flex; flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px; padding: 16px;
+  background: #0f0d1a; overflow-y: auto;
+}
+.fm-icon {
+  display: flex; flex-direction: column; align-items: center;
+  width: 90px; padding: 10px 6px;
+  cursor: pointer; border-radius: 6px;
+  user-select: none; transition: background 0.12s;
+}
+.fm-icon:hover { background: rgba(120,80,200,0.25); }
+.fm-gfx  { font-size: 40px; line-height: 1; margin-bottom: 6px; }
+.fm-name { font-size: 11px; color: var(--panel-text); text-align: center; word-break: break-word; line-height: 1.3; }
 
-/* ── Colors ── */
-.green { color: var(--green) !important; }
-.red { color: var(--red) !important; }
-.yellow { color: var(--yellow) !important; }
-.blue { color: var(--blue) !important; }
-.purple { color: var(--purple) !important; }
-.orange { color: var(--orange) !important; }
-.cyan { color: var(--cyan) !important; }
-.dim { color: var(--dim) !important; }
-.dim2 { color: var(--dim2) !important; }
-.bold { font-weight: 700 !important; }
-.ul { text-decoration: underline; }
+/* ── Context Menu ────────────────────────── */
+.ctx-menu {
+  position: fixed;
+  background: rgba(18, 14, 32, 0.97);
+  border: 1px solid var(--win-border);
+  border-radius: 6px; padding: 4px 0;
+  min-width: 190px;
+  z-index: 500;
+  box-shadow: 4px 6px 24px rgba(0,0,0,0.7);
+  backdrop-filter: blur(12px);
+  opacity: 1; visibility: visible;
+  transition: opacity 0.1s ease, visibility 0.1s ease;
+}
+.ctx-menu.hidden {
+  opacity: 0; visibility: hidden;
+  pointer-events: none;
+}
+.ctx-item {
+  padding: 7px 16px; font-size: 12px;
+  color: var(--panel-text); cursor: pointer;
+  transition: background 0.1s;
+}
+.ctx-item:hover { background: var(--panel-hover); }
+.ctx-item.ctx-dim { color: var(--panel-dim); font-size: 11px; cursor: default; }
+.ctx-item.ctx-dim:hover { background: none; }
+.ctx-sep { height: 1px; background: var(--panel-sep); margin: 3px 0; }
 
-/* ── Scrollbar global ── */
+/* ── Toast Notifications ─────────────────── */
+.toast-container {
+  position: fixed; top: 36px; right: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  z-index: 600; pointer-events: none;
+}
+.toast {
+  background: rgba(18, 14, 32, 0.96);
+  border: 1px solid var(--win-border);
+  border-left: 3px solid var(--k-yellow);
+  border-radius: 6px; padding: 10px 14px;
+  max-width: 280px; pointer-events: all;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  animation: toast-in 0.2s ease-out;
+  backdrop-filter: blur(10px);
+}
+.toast.toast-crit { border-left-color: var(--k-red); }
+.toast.toast-info { border-left-color: var(--k-blue); }
+.toast-title { font-size: 11px; font-weight: 600; color: var(--k-yellow); margin-bottom: 3px; font-family: var(--mono); }
+.toast.toast-crit .toast-title { color: var(--k-red); }
+.toast.toast-info .toast-title { color: var(--k-blue); }
+.toast-body { font-size: 11px; color: var(--panel-text); line-height: 1.4; font-family: var(--mono); }
+@keyframes toast-in  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateX(20px); } }
+.toast.removing { animation: toast-out 0.2s ease-in forwards; }
+
+/* ── Misc helpers ────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(80,60,140,0.5); border-radius: 2px; }
 
-/* ── Alert pulsing ── */
-@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
-.pulse { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+.pulse { animation: pulse 1.5s ease-in-out infinite; }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .side-panel { display: none; }
+/* ── Mobile fallback ─────────────────────── */
+.mobile-msg {
+  display: none;
+  position: fixed; inset: 0;
+  background: #0d0b16;
+  align-items: center; justify-content: center; flex-direction: column;
+  text-align: center; color: #a898d8;
+  font-size: 16px; gap: 8px;
+  z-index: 9999;
 }
-@media (max-width: 640px) {
-  .sidebar { display: none; }
-  .sidebar.mobile-open { display: flex; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
-  .quickbar { display: none; }
-  .ttab { display: flex; }
-}
-@media (min-width: 901px) {
-  .topbar-tabs { display: none; }
-  #tab-terminal { display: flex !important; }
+.mobile-msg small { font-size: 12px; color: #6860a0; }
+
+@media (max-width: 600px) {
+  .mobile-msg { display: flex; }
+  .kali-desktop { display: none; }
 }
