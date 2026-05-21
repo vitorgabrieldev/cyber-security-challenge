@@ -166,18 +166,44 @@
   <!-- Toast notification container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- TTY Login Screen (shown after reboot) -->
+  <!-- GDM Login Screen (shown after reboot) -->
   <div class="login-screen hidden" id="login-screen">
-    <div class="ls-tty-bar" id="ls-tty-bar">Ubuntu 22.04.3 LTS forensics-lab tty1</div>
-    <div class="ls-block">
-      <div class="ls-line" id="ls-line1"></div>
-      <div class="ls-line" id="ls-line2">forensics-lab login: <span class="ls-user">root</span></div>
-      <div class="ls-pwd-row">
-        <span>Password: </span>
-        <input id="ls-pwd" type="password" class="ls-pwd-input" autocomplete="off" spellcheck="false">
+
+    <!-- Top status bar -->
+    <div class="ls-gdm-topbar">
+      <div class="ls-gdm-tb-left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </div>
-      <div class="ls-error" id="ls-error">Login incorrect</div>
+      <div class="ls-gdm-tb-right">
+        <span class="ls-gdm-locale">en_US.UTF-8</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <span class="ls-gdm-clock" id="ls-gdm-clock">--:--</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+      </div>
     </div>
+
+    <!-- Center login card -->
+    <div class="ls-gdm-center">
+      <div class="ls-gdm-card">
+        <div class="ls-gdm-avatar">
+          <svg width="44" height="44" viewBox="0 0 24 24"><path d="M12 2L3 7v10l9 5 9-5V7L12 2z" fill="#268bd2"/></svg>
+        </div>
+        <div class="ls-gdm-username">root</div>
+        <input id="ls-pwd" type="password" class="ls-gdm-pwd" placeholder="Password" autocomplete="off" spellcheck="false">
+        <div class="ls-error" id="ls-error">Sorry, that didn't work. Please try again.</div>
+        <div class="ls-gdm-btns">
+          <button class="ls-gdm-btn ls-gdm-cancel" id="ls-cancel-btn" tabindex="-1">Cancel</button>
+          <button class="ls-gdm-btn ls-gdm-login" id="ls-login-btn">Log In</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Kali branding -->
+    <div class="ls-gdm-brand">
+      <div class="ls-brand-kali">KALI</div>
+      <div class="ls-brand-sub">BY OFFENSIVE SECURITY</div>
+    </div>
+
     <div class="ls-hint" id="ls-hint"></div>
   </div>
 

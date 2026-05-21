@@ -1527,42 +1527,59 @@ function _loginPassword() {
 }
 
 function showLoginScreen(onSuccess) {
-  const el    = document.getElementById('login-screen');
-  const inp   = document.getElementById('ls-pwd');
-  const err   = document.getElementById('ls-error');
-  const hint  = document.getElementById('ls-hint');
-  const line1 = document.getElementById('ls-line1');
-  const bar   = document.getElementById('ls-tty-bar');
+  const el        = document.getElementById('login-screen');
+  const inp       = document.getElementById('ls-pwd');
+  const err       = document.getElementById('ls-error');
+  const hint      = document.getElementById('ls-hint');
+  const clockEl   = document.getElementById('ls-gdm-clock');
+  const loginBtn  = document.getElementById('ls-login-btn');
+  const cancelBtn = document.getElementById('ls-cancel-btn');
 
-  const now = new Date().toLocaleString('en-US', { weekday:'short', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', year:'numeric' });
-  bar.textContent  = `Ubuntu 22.04.3 LTS forensics-lab tty1`;
-  line1.textContent = `\nBroadcast message from root@forensics-lab:\nThe system has rebooted — ${now}\n`;
-  hint.textContent  = `Password format: DDMMYYYY`;
-
+  hint.textContent = 'Password: DDMMYYYY';
   err.classList.remove('visible');
   inp.value = '';
   el.classList.remove('hidden', 'ls-fade-out');
 
+  // Live clock
+  function updateClock() {
+    const d  = new Date();
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mo = d.toLocaleString('en-US', { month: 'short' });
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    clockEl.textContent = `${dd} ${mo}, ${hh}:${mm}`;
+  }
+  updateClock();
+  const clockTick = setInterval(updateClock, 10000);
+
   setTimeout(() => inp.focus(), 80);
 
-  function onKey(e) {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
+  function doLogin() {
     if (inp.value === _loginPassword()) {
+      clearInterval(clockTick);
       inp.removeEventListener('keydown', onKey);
+      loginBtn.removeEventListener('click', doLogin);
       el.classList.add('ls-fade-out');
       setTimeout(() => {
         el.classList.add('hidden');
         el.classList.remove('ls-fade-out');
         onSuccess();
-      }, 300);
+      }, 400);
     } else {
       err.classList.add('visible');
       inp.value = '';
       setTimeout(() => err.classList.remove('visible'), 2000);
+      inp.focus();
     }
   }
+
+  function onKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+  }
+
   inp.addEventListener('keydown', onKey);
+  loginBtn.addEventListener('click', doLogin);
+  if (cancelBtn) cancelBtn.addEventListener('click', () => inp.focus());
 }
 
 // ── New Session ──────────────────────────────────
