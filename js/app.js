@@ -75,6 +75,7 @@ const WALLPAPERS = [
 function setRandomWallpaper() {
   const wp = WALLPAPERS[Math.floor(Math.random() * WALLPAPERS.length)];
   document.getElementById('desktop').style.backgroundImage = `url('${wp}')`;
+  scheduleSave();
 }
 function changeWallpaper() { setRandomWallpaper(); }
 
@@ -353,6 +354,7 @@ function openTerminalWindow() {
   focusWin(id);
   createPaneInWin(win);
   updateTaskbar();
+  scheduleSave();
   return win;
 }
 
@@ -373,6 +375,7 @@ function closeTermWindow(id) {
     if (focusedWinId) focusWin(focusedWinId);
   }
   updateTaskbar();
+  scheduleSave();
   win.el.classList.add('closing');
   setTimeout(() => win.el.remove(), 150);
 }
@@ -383,6 +386,7 @@ function minimizeWindow(id) {
   win.el.style.display = 'none';
   win.minimized = true;
   updateTaskbar();
+  scheduleSave();
 }
 
 function maximizeWindow(id) {
@@ -399,6 +403,7 @@ function maximizeWindow(id) {
     win.maximized = true;
   }
   focusWin(id);
+  scheduleSave();
 }
 
 function taskbarClickWin(id) {
@@ -662,6 +667,7 @@ async function handlePasswordInput(pwd, pane) {
     pane.passwordBuffer = '';
     t.createInputLine(makeOnKey(pane));
   }
+  scheduleSave();
 }
 
 // ── Core command runner ─────────────────────────
@@ -964,6 +970,7 @@ async function runCmdOnPane(rawInput, pane) {
 
   } finally {
     if (!pane.liveProcess && !pane.passwordMode && !pane.confirmPending) t.createInputLine(makeOnKey(pane));
+    scheduleSave();
   }
 }
 
@@ -1085,6 +1092,7 @@ async function bootKali(pane) {
     '',
   ], 0, 30);
   pane.term.createInputLine(makeOnKey(pane));
+  scheduleSave();
 }
 
 // ── cat handler ─────────────────────────────────
@@ -1228,6 +1236,7 @@ function addIoc(text) {
   if (!iocs.includes(text)) {
     iocs.push(text);
     showToast('⚠ IoC Detectado', text, 'crit');
+    scheduleSave();
   }
 }
 
@@ -1349,6 +1358,7 @@ function triggerNewSession() {
   }
 }
 function doNewSession() {
+  clearSavedState();
   scenario = pickScenario();
   sessionCreds = generateCreds();
   iocs = []; notes = []; labNotes = []; cmdLog = []; hintCount = 0;
@@ -1357,12 +1367,10 @@ function doNewSession() {
   clearInterval(timerInt);
   timerInt = null;
 
-  // Close all windows & open fresh one
   [...WINDOWS].forEach(w => closeTermWindow(w.id));
   setRandomWallpaper();
 
   const win = openTerminalWindow();
-  const pane = win.panes[0];
   updateTaskbar();
 }
 
@@ -1592,15 +1600,20 @@ function startSysInfo() {
 
 // ── Init ─────────────────────────────────────────
 function init() {
-  if (window.innerWidth < 600) return; // mobile guard — CSS handles the message
-  setRandomWallpaper();
+  if (window.innerWidth < 600) return;
   startClock();
-  scenario     = pickScenario();
-  sessionCreds = generateCreds();
   initDesktopSelection();
   initFloatingWindows();
   initDesktopIcons();
   startSysInfo();
+
+  const restored = restoreState();
+  if (!restored) {
+    setRandomWallpaper();
+    scenario     = pickScenario();
+    sessionCreds = generateCreds();
+    openTerminalWindow();
+  }
 }
 
 window.addEventListener('DOMContentLoaded', init);

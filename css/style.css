@@ -73,22 +73,27 @@ html, body {
 .kp-left  { display: flex; align-items: center; gap: 2px; }
 .kp-right { display: flex; align-items: center; gap: 8px; }
 
-.kali-logo { display: flex; align-items: center; margin-right: 4px; opacity: 0.9; }
-
-.kp-appbtn {
-  font-size: 12px; color: var(--panel-text);
-  padding: 0 8px; height: 28px; display: flex; align-items: center;
-  cursor: pointer; border-radius: 3px; transition: background 0.12s;
-  font-weight: 500;
+.kali-logo {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 28px;
+  cursor: pointer; border-radius: 3px;
+  transition: background 0.12s;
+  opacity: 0.9;
+  flex-shrink: 0;
 }
-.kp-appbtn:hover, .kp-appbtn.active { background: var(--panel-hover); }
+.kali-logo:hover, .kali-logo.active { background: var(--panel-hover); opacity: 1; }
 
-.kp-menu-dim {
-  font-size: 12px; color: var(--panel-dim);
-  padding: 0 8px; height: 28px; display: flex; align-items: center;
-  cursor: pointer;
+.kp-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 28px;
+  background: transparent; border: none; outline: none;
+  cursor: pointer; border-radius: 3px; padding: 0;
+  color: var(--panel-dim);
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
 }
-.kp-menu-dim:hover { background: var(--panel-hover); border-radius: 3px; }
+.kp-icon-btn:hover { background: var(--panel-hover); color: var(--panel-text); }
+.kp-icon-img { width: 17px; height: 17px; object-fit: contain; display: block; }
 
 .kp-net     { font-size: 11px; color: var(--panel-dim); font-family: var(--mono); }
 .kp-sep     { width: 1px; height: 14px; background: var(--panel-sep); }
@@ -98,7 +103,7 @@ html, body {
 
 /* ── Applications Launcher ─────────────────── */
 .app-launcher {
-  position: fixed; left: 0;
+  position: fixed; left: 0; top: 28px;
   background: rgba(18, 14, 32, 0.97);
   border: 1px solid var(--win-border);
   border-top: none;
