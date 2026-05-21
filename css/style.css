@@ -535,6 +535,57 @@ html, body {
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 .pulse { animation: pulse 1.5s ease-in-out infinite; }
 
+/* ── Login Screen (TTY style) ────────────── */
+.login-screen {
+  position: fixed; inset: 0; z-index: 9998;
+  background: #0a0a0a;
+  font-family: var(--mono);
+  color: #c8c8c8;
+  padding: 72px 56px;
+  display: flex; flex-direction: column;
+  transition: opacity 0.3s;
+}
+.login-screen.hidden { display: none; }
+.login-screen.ls-fade-out { opacity: 0; pointer-events: none; }
+
+.ls-tty-bar {
+  font-size: 12px; color: #555;
+  margin-bottom: 40px;
+  letter-spacing: 0.02em;
+}
+
+.ls-block { display: flex; flex-direction: column; gap: 6px; }
+
+.ls-line {
+  font-size: 13.5px; color: #c8c8c8;
+  line-height: 1.6; white-space: pre;
+}
+.ls-line .ls-user { color: #ffffff; }
+
+.ls-pwd-row {
+  display: flex; align-items: center;
+  font-size: 13.5px; color: #c8c8c8;
+  gap: 0; white-space: pre;
+}
+.ls-pwd-input {
+  background: transparent; border: none; outline: none;
+  font-family: var(--mono); font-size: 13.5px;
+  color: #c8c8c8; caret-color: #c8c8c8;
+  width: 220px; letter-spacing: 0.08em;
+}
+
+.ls-error {
+  font-size: 13.5px; color: #c8c8c8;
+  margin-top: 6px;
+  opacity: 0; transition: opacity 0.2s;
+}
+.ls-error.visible { opacity: 1; }
+
+.ls-hint {
+  position: absolute; bottom: 40px; left: 56px;
+  font-size: 11px; color: #333;
+}
+
 /* ── Mobile fallback ─────────────────────── */
 .mobile-msg {
   display: none;

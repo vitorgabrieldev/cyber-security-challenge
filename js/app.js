@@ -460,8 +460,9 @@ function createPaneInWin(win) {
   const getPrompt = () => {
     if (pane.passwordMode)  return { pre: null, prompt: '' };
     if (!pane.sshConnected) {
+      const localDir = pane.cwd === '/root' ? '~' : pane.cwd;
       return {
-        pre:    `<span class="kp-bracket">┌──(</span><span class="kp-user">root㉿kali</span><span class="kp-bracket">)-[</span><span class="kp-path">~</span><span class="kp-bracket">]</span>`,
+        pre:    `<span class="kp-bracket">┌──(</span><span class="kp-user">root㉿kali</span><span class="kp-bracket">)-[</span><span class="kp-path">${localDir}</span><span class="kp-bracket">]</span>`,
         prompt: `<span class="kp-arrow">└─</span><span class="kp-hash"># </span>`,
       };
     }
@@ -693,6 +694,20 @@ async function runCmdOnPane(rawInput, pane) {
   try {
     if (c === 'clear') { t.clear(); return; }
 
+    if (c === 'reboot' || c === 'new-session' || c === 'reset') {
+      await t.printLines([
+        '',
+        `<span class="yellow">Broadcast message from root@forensics-lab (pts/0):</span>`,
+        `<span class="yellow">The system is going down for reboot NOW!</span>`,
+        '',
+        `<span class="dim">Connection to ${sessionCreds?.ip || '10.0.0.1'} closed.</span>`,
+        '',
+      ], 0, 40);
+      await new Promise(r => setTimeout(r, 1200));
+      showLoginScreen(() => doNewSession());
+      return;
+    }
+
     // ── PRE-SSH: kali local shell ──
     if (!pane.sshConnected) {
       await handleKaliCmd(c, args, raw, pane);
@@ -701,18 +716,6 @@ async function runCmdOnPane(rawInput, pane) {
 
     // ── POST-SSH: full forensics shell ──
     cmdLog.push(raw);
-
-    if (c === 'new-session' || c === 'reset') {
-      await t.printLines([
-        '',
-        `<span class="yellow">[!] Isso encerrará a sessão atual sem salvar.</span>`,
-        `<span class="dim">Tem certeza? (s/N): </span>`,
-        '',
-      ]);
-      pane.confirmPending = 'new-session';
-      t.createInputLine(makeOnKey(pane));
-      return;
-    }
 
     // Pipe support
     if (raw.includes(' | ')) {
@@ -808,9 +811,12 @@ async function runCmdOnPane(rawInput, pane) {
     if (c === 'pwd') { await t.printLines([pane.cwd]); return; }
 
     if (c === 'ls') {
-      const target = args[0] || pane.cwd;
-      await t.printLines(CMDS.lsPath(scenario, target));
-      if (target.startsWith('/tmp') || (pane.cwd.startsWith('/tmp') && !args[0])) revealTimeline('ls_tmp');
+      const hasLong = args.some(a => a.startsWith('-') && a.includes('l'));
+      const nonFlags = args.filter(a => !a.startsWith('-'));
+      const target = nonFlags[0] || pane.cwd;
+      const lines = hasLong ? CMDS.lsLong(scenario, target) : CMDS.lsPath(scenario, target);
+      await t.printLines(lines);
+      if (target.startsWith('/tmp') || (pane.cwd.startsWith('/tmp') && !nonFlags[0])) revealTimeline('ls_tmp');
       return;
     }
 
@@ -827,12 +833,40 @@ async function runCmdOnPane(rawInput, pane) {
     }
 
     if (c === 'find') {
+      const findDelay = 800 + Math.random() * 1200;
+      await t.appendLine('<span class="dim">find: searching...</span>');
+      await new Promise(r => setTimeout(r, findDelay));
       const lines = CMDS.find(scenario, args);
       await t.printLines(lines, 0, 18);
       revealTimeline('find');
       if (scenario.check === 'cryptominer') addIoc('binário xmrig encontrado em /tmp/.xmr/');
       if (scenario.check === 'ransomware')  addIoc('toolkit ransomware em /tmp/.crypt/');
       if (scenario.check === 'botnet_c2')   addIoc('agente botnet encontrado em /tmp/.agent/');
+      return;
+    }
+
+    if (c === 'kill' || c === 'pkill') {
+      await handleKill(c, args, pane);
+      return;
+    }
+
+    if (c === 'rm') {
+      await handleRm(args, pane);
+      return;
+    }
+
+    if (c === 'wc') {
+      if (!args.includes('-l')) { await t.printLines(['<span class="dim">uso: wc -l &lt;arquivo&gt;</span>', '']); return; }
+      const wNonFlags = args.filter(a => !a.startsWith('-'));
+      const wFile = wNonFlags[0] || '';
+      if (!wFile) { await t.printLines(['<span class="red">wc: faltando arquivo. use pipe: cmd | wc -l</span>', '']); return; }
+      let wLines = [];
+      if (wFile.includes('auth'))                                    wLines = CMDS.auth_log(scenario);
+      else if (wFile.includes('nginx')||wFile.includes('access'))   wLines = CMDS.nginx_log(scenario);
+      else if (wFile.includes('syslog'))                             wLines = CMDS.syslog(scenario);
+      else { await t.printLines([`<span class="red">wc: ${esc(wFile)}: No such file or directory</span>`, '']); return; }
+      const wCount = wLines.filter(l => l && l.trim()).length;
+      await t.printLines([`<span class="fp-path">${wCount}</span> ${esc(wFile)}`, '']);
       return;
     }
 
@@ -849,17 +883,25 @@ async function runCmdOnPane(rawInput, pane) {
     }
 
     if (c === 'grep') {
-      const invert   = args.includes('-v');
-      const nonFlags = args.filter(a => !a.startsWith('-'));
-      const pattern  = nonFlags[0] || '';
-      const filePath = nonFlags.slice(1).join(' ');
-      if (!pattern) { await t.printLines(['<span class="red">uso: grep [-v] &lt;padrão&gt; &lt;arquivo&gt;</span>', '']); return; }
+      const invert      = args.includes('-v');
+      const isRecursive = args.includes('-r') || args.includes('-R');
+      const nonFlags    = args.filter(a => !a.startsWith('-'));
+      const pattern     = nonFlags[0] || '';
+      const filePath    = nonFlags.slice(1).join(' ');
+      if (!pattern) { await t.printLines(['<span class="red">uso: grep [-rv] &lt;padrão&gt; &lt;arquivo|dir&gt;</span>', '']); return; }
+      if (isRecursive) {
+        const dir = filePath || pane.cwd;
+        revealTimeline('auth_log'); revealTimeline('nginx_log');
+        const result = CMDS.grepRecursive(scenario, pattern, dir);
+        await t.printLines(result, 0, 40);
+        return;
+      }
       if (!filePath) { await t.printLines(['<span class="red">grep: faltando arquivo. use pipe: cmd | grep padrão</span>', '']); return; }
       let srcLines = [], trigger = null;
-      if (filePath.includes('auth'))                              { srcLines = CMDS.auth_log(scenario);  trigger = 'auth_log'; autoIoc('auth_log',''); }
+      if (filePath.includes('auth'))                                   { srcLines = CMDS.auth_log(scenario);  trigger = 'auth_log'; autoIoc('auth_log',''); }
       else if (filePath.includes('nginx')||filePath.includes('access')) { srcLines = CMDS.nginx_log(scenario); trigger = 'nginx_log'; autoIoc('nginx_log',''); }
-      else if (filePath.includes('syslog'))                       { srcLines = CMDS.syslog(scenario);    trigger = 'syslog'; }
-      else if (filePath.includes('dmesg'))                        { srcLines = CMDS.dmesg(scenario);     trigger = 'dmesg'; }
+      else if (filePath.includes('syslog'))                            { srcLines = CMDS.syslog(scenario);    trigger = 'syslog'; }
+      else if (filePath.includes('dmesg'))                             { srcLines = CMDS.dmesg(scenario);     trigger = 'dmesg'; }
       else { await t.printLines([`<span class="red">grep: ${esc(filePath)}: No such file or directory</span>`, '']); return; }
       if (trigger) revealTimeline(trigger);
       const result = CMDS.grepFilter(srcLines, pattern, invert);
@@ -868,9 +910,17 @@ async function runCmdOnPane(rawInput, pane) {
     }
 
     if (c === 'tail') {
-      const isF         = args.includes('-f');
-      const nonFlagArgs = args.filter(a => !a.startsWith('-'));
-      const logFile     = nonFlagArgs[0] || '';
+      const isF = args.includes('-f');
+      let nLines = 10;
+      const nIdx = args.indexOf('-n');
+      if (nIdx !== -1 && args[nIdx+1]) nLines = parseInt(args[nIdx+1]) || 10;
+      else { const m = args.find(a => /^-\d+$/.test(a)); if (m) nLines = parseInt(m.slice(1)) || 10; }
+      const nonFlagArgs = args.filter((a, i) => {
+        if (a.startsWith('-')) return false;
+        if (i > 0 && args[i-1] === '-n') return false;
+        return true;
+      });
+      const logFile = nonFlagArgs[0] || '';
       let logKey = null, trigger = null;
       if (logFile.includes('auth'))                                      { logKey='auth';   trigger='auth_log'; }
       else if (logFile.includes('nginx')||logFile.includes('access'))    { logKey='nginx';  trigger='nginx_log'; }
@@ -880,10 +930,11 @@ async function runCmdOnPane(rawInput, pane) {
         return;
       }
       let existingLines;
-      if (logKey==='auth')  { autoIoc('auth_log',''); existingLines = CMDS.auth_log(scenario); }
+      if (logKey==='auth')       { autoIoc('auth_log',''); existingLines = CMDS.auth_log(scenario); }
       else if (logKey==='nginx') { autoIoc('nginx_log',''); existingLines = CMDS.nginx_log(scenario); }
       else                       { existingLines = CMDS.syslog(scenario); }
       revealTimeline(trigger);
+      if (!isF) existingLines = existingLines.filter(l => l !== null && l !== undefined).slice(-nLines);
       await t.printLines(existingLines, 0, 18);
       if (isF) {
         await t.appendLine(`<span class="dim">--- seguindo ${esc(logFile)} --- (Ctrl+C para parar)</span>`);
@@ -933,6 +984,15 @@ async function runCmdOnPane(rawInput, pane) {
       startLive(pane, () => CMDS.liveNload(scenario), 2000);
       return;
     }
+    if (c === 'nmap') {
+      const nmapDelay = 3000 + Math.random() * 2000;
+      await t.appendLine('<span class="dim">Starting Nmap 7.93 — scanning 192.168.0.10...</span>');
+      await new Promise(r => setTimeout(r, nmapDelay));
+      await t.printLines(CMDS.nmap(), 0, 18);
+      revealTimeline('nmap');
+      return;
+    }
+
     if (c === 'tcpdump') {
       await t.printLines(['', '<span class="dim">tcpdump: listening on eth0... (Ctrl+C para sair)</span>']);
       await new Promise(r => setTimeout(r,1800));
@@ -951,7 +1011,7 @@ async function runCmdOnPane(rawInput, pane) {
     else if (c === 'iostat')  { lines = CMDS.iostat(scenario);  revealTimeline('iostat'); }
     else if (c === 'dmesg')   { lines = CMDS.dmesg(scenario);   revealTimeline('dmesg'); maybeAddIoc('dmesg'); }
     else if (c === 'iptables')  lines = CMDS.iptables(scenario);
-    else if (c === 'nmap')      lines = CMDS.nmap();
+    else if (c === 'nmap')      { /* handled above with delay */ }
     else if (c === 'whois')  { lines = CMDS.whois(scenario, args); addIoc(`IP ${args[0]||scenario.whois_ip} investigado via whois`); revealTimeline('whois'); }
     else if (c === 'geoip')  { lines = CMDS.geoip(scenario, args); addIoc(`geolocalização verificada: ${args[0]||scenario.whois_ip}`); }
     else if (c === 'abuse')  { lines = CMDS.abuse(scenario, args); addIoc(`abuse score verificado: ${args[0]||scenario.whois_ip}`); }
@@ -974,6 +1034,57 @@ async function runCmdOnPane(rawInput, pane) {
   }
 }
 
+// ── kill / pkill ────────────────────────────────
+async function handleKill(cmd, args, pane) {
+  const t  = pane.term;
+  const sc = scenario;
+  const PIDS  = { cryptominer:'9871', ransomware:'3341', botnet_c2:'7821', reverse_shell:'5123', log_wipe:'6621', webshell:'4412' };
+  const NAMES = { cryptominer:'xmrig', ransomware:'enc', botnet_c2:'bot', reverse_shell:'bash', webshell:'bash' };
+  const suspPid  = PIDS[sc.check];
+  const suspName = NAMES[sc.check];
+  const target = args.find(a => !a.startsWith('-')) || '';
+  if (!target) { await t.printLines([`<span class="red">uso: kill &lt;pid&gt;  ou  pkill &lt;nome&gt;</span>`, '']); return; }
+  const matched = (cmd === 'kill' && target === suspPid) || (cmd === 'pkill' && suspName && target === suspName);
+  if (matched) {
+    await t.printLines([`<span class="green">processo eliminado (PID ${suspPid})</span>`, '']);
+    addIoc(`processo suspeito eliminado: PID ${suspPid} (${suspName || target})`);
+    revealTimeline('kill');
+  } else if (target === '1' || target === 'init' || target === 'systemd') {
+    await t.printLines([`<span class="red">kill: (${target}): Operation not permitted</span>`, '']);
+  } else {
+    await t.printLines([`<span class="dim">(${target}): No such process</span>`, '']);
+  }
+}
+
+// ── rm ──────────────────────────────────────────
+async function handleRm(args, pane) {
+  const t  = pane.term;
+  const sc = scenario;
+  const isForce = args.some(a => a.startsWith('-') && a.includes('f')) || args.some(a => a.startsWith('-') && a.includes('r'));
+  const nonFlags = args.filter(a => !a.startsWith('-'));
+  const target = nonFlags.join(' ').trim();
+  if (!target) { await t.printLines([`<span class="red">rm: missing operand</span>`, '']); return; }
+  const TARGETS = {
+    cryptominer:   ['/tmp/.xmr'],
+    ransomware:    ['/tmp/.crypt'],
+    botnet_c2:     ['/tmp/.agent'],
+    webshell:      ['/var/www/html/shell.php', '/tmp/shell.php'],
+    reverse_shell: ['/tmp/.sh', '/tmp/.backdoor'],
+  };
+  const suspicious = TARGETS[sc.check] || [];
+  if (target.startsWith('/etc') || target.startsWith('/bin') || target.startsWith('/usr') || target.startsWith('/var/log')) {
+    await t.printLines([`<span class="red">rm: cannot remove '${esc(target)}': Permission denied</span>`, '']); return;
+  }
+  if (suspicious.some(s => target === s || target.startsWith(s))) {
+    if (!isForce) { await t.printLines([`<span class="yellow">rm: descend into directory '${esc(target)}'? use -rf para forçar</span>`, '']); return; }
+    await t.printLines([`<span class="green">removido: ${esc(target)}</span>`, '']);
+    addIoc(`artefato malicioso removido: ${target}`);
+    revealTimeline('rm');
+  } else {
+    await t.printLines([`<span class="red">rm: cannot remove '${esc(target)}': No such file or directory</span>`, '']);
+  }
+}
+
 // ── Pre-SSH kali shell ──────────────────────────
 async function handleKaliCmd(c, args, raw, pane) {
   const t = pane.term;
@@ -982,12 +1093,42 @@ async function handleKaliCmd(c, args, raw, pane) {
   if (c === 'id')     { await t.printLines(['<span class="dim">uid=0(root) gid=0(root) groups=0(root)</span>']); return; }
   if (c === 'pwd')    { await t.printLines(['/root']); return; }
   if (c === 'uname')  { await t.printLines(['<span class="dim">Linux kali 6.6.9-amd64 #1 SMP PREEMPT Debian 6.6.9-1kali1 x86_64 GNU/Linux</span>']); return; }
+  if (c === 'cd') {
+    const target = args[0] || '/root';
+    const resolved = resolvePath(pane.cwd, target);
+    const LOCAL_VALID = new Set(['/root','~','/home','/tmp','/etc','/var','/var/log','/proc','/opt','/usr','/']);
+    if (LOCAL_VALID.has(resolved)) {
+      pane.cwd = resolved;
+    } else {
+      await t.appendLine(`<span class="red">cd: ${esc(args[0])}: No such file or directory</span>`);
+    }
+    return;
+  }
   if (c === 'ls') {
-    await t.printLines([
-      '<span class="kp-path">Desktop</span>  <span class="kp-path">Documents</span>  <span class="kp-path">Downloads</span>  <span class="kp-path">investigation</span>',
-      '<span class="dim">access.txt</span>  <span class="dim">.bashrc</span>  <span class="dim">.zshrc</span>',
-      '',
-    ], 0, 15);
+    const hasLong = args.some(a => a.startsWith('-') && a.includes('l'));
+    const nonFlags = args.filter(a => !a.startsWith('-'));
+    if (!nonFlags[0] && !hasLong) {
+      await t.printLines([
+        '<span class="kp-path">Desktop</span>  <span class="kp-path">Documents</span>  <span class="kp-path">Downloads</span>  <span class="kp-path">investigation</span>',
+        '<span class="dim">access.txt</span>  <span class="dim">.bashrc</span>  <span class="dim">.zshrc</span>',
+        '',
+      ], 0, 15);
+    } else {
+      await t.printLines([
+        '', '<span class="dim">total 48</span>',
+        '<span class="dim">drwx------  5 root root 4096 May 15 <span class="kp-path">.</span></span>',
+        '<span class="dim">drwxr-xr-x 20 root root 4096 May 01 <span class="kp-path">..</span></span>',
+        '<span class="dim">-rw-r--r--  1 root root  212 May 09 access.txt</span>',
+        '<span class="dim">-rw-r--r--  1 root root 3526 May 01 .bashrc</span>',
+        '<span class="kp-path">drwxr-xr-x  2 root root 4096 May 15 Desktop</span>',
+        '<span class="kp-path">drwxr-xr-x  2 root root 4096 May 15 Documents</span>',
+        '<span class="kp-path">drwxr-xr-x  2 root root 4096 May 15 Downloads</span>',
+        '<span class="kp-path">drwxr-xr-x  2 root root 4096 May 15 investigation</span>',
+        '<span class="dim">-rw-r--r--  1 root root  168 May 01 .profile</span>',
+        '<span class="dim">-rw-r--r--  1 root root  861 May 01 .zshrc</span>',
+        '',
+      ], 0, 15);
+    }
     return;
   }
   if (c === 'cat') {
@@ -1039,6 +1180,13 @@ async function handleKaliCmd(c, args, raw, pane) {
 async function doSshHandshake(pane, host) {
   const t   = pane.term;
   const crd = sessionCreds;
+
+  // Occasionally simulate a slow/timeout first attempt (~25% chance)
+  if (Math.random() < 0.25) {
+    await t.appendLine(`<span class="dim">ssh: connect to host ${host} port 22: Connection timed out — retrying...</span>`);
+    await new Promise(r => setTimeout(r, 1800));
+  }
+
   await t.printLines([
     `<span class="dim">The authenticity of host '${host} (${host})' can't be established.</span>`,
     `<span class="dim">ED25519 key fingerprint is SHA256:7K3mN9pQ2xR8jYvLd5wFh1cB6sZ0uMtPnAeGI4koXw.</span>`,
@@ -1126,7 +1274,12 @@ function getCmdLines(rawCmd, pane) {
   if (c === 'iptables') return CMDS.iptables(scenario);
   if (c === 'nmap')    return CMDS.nmap();
   if (c === 'find')    return CMDS.find(scenario, args);
-  if (c === 'ls')      return CMDS.lsPath(scenario, args[0] || pane.cwd);
+  if (c === 'ls') {
+    const hasLong = args.some(a => a.startsWith('-') && a.includes('l'));
+    const nonFlags = args.filter(a => !a.startsWith('-'));
+    const lsTarget = nonFlags[0] || pane.cwd;
+    return hasLong ? CMDS.lsLong(scenario, lsTarget) : CMDS.lsPath(scenario, lsTarget);
+  }
   if (c === 'status')  return CMDS.status(scenario);
   if (c === 'tail'||c === 'head'||c === 'grep') {
     const nonFlags = args.filter(a => !a.startsWith('-'));
@@ -1156,8 +1309,22 @@ function applyPipeFilter(rawCmd, lines) {
   if (c === 'head') { const n = parseInt(args.find(a=>/^-?\d+$/.test(a))?.replace('-','') || '10',10); return lines.slice(0,n); }
   if (c === 'tail') { const n = parseInt(args.find(a=>/^-?\d+$/.test(a))?.replace('-','') || '10',10); return lines.slice(-n); }
   if (c === 'wc' && args.includes('-l')) { const count = lines.filter(l=>l&&l.trim()).length; return [`<span class="fp-path">${count}</span>`]; }
-  if (c === 'sort')   return [...lines].sort();
-  if (c === 'uniq')   return [...new Set(lines)];
+  if (c === 'sort') {
+    const sorted = [...lines].sort((a, b) => {
+      const ta = String(a).replace(/<[^>]+>/g,''), tb = String(b).replace(/<[^>]+>/g,'');
+      return args.includes('-n') ? (parseFloat(ta)||0)-(parseFloat(tb)||0) : ta.localeCompare(tb);
+    });
+    return args.includes('-r') ? sorted.reverse() : sorted;
+  }
+  if (c === 'uniq') {
+    if (args.includes('-c')) {
+      const stripH = h => String(h).replace(/<[^>]+>/g,'').trim();
+      const counts = new Map(), order = [];
+      lines.forEach(l => { const k = stripH(l); if (!k) return; if (!counts.has(k)) { counts.set(k,{line:l,n:0}); order.push(k); } counts.get(k).n++; });
+      return order.map(k => `<span class="fp-path">${String(counts.get(k).n).padStart(6)}</span> ${counts.get(k).line}`);
+    }
+    return [...new Set(lines)];
+  }
   return lines;
 }
 
@@ -1349,6 +1516,53 @@ function fmtTimer() {
 }
 function startTimer() {
   timerInt = setInterval(() => { timerSec++; }, 1000);
+}
+
+// ── Login Screen ────────────────────────────────
+function _loginPassword() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${dd}${mm}${d.getFullYear()}`;
+}
+
+function showLoginScreen(onSuccess) {
+  const el    = document.getElementById('login-screen');
+  const inp   = document.getElementById('ls-pwd');
+  const err   = document.getElementById('ls-error');
+  const hint  = document.getElementById('ls-hint');
+  const line1 = document.getElementById('ls-line1');
+  const bar   = document.getElementById('ls-tty-bar');
+
+  const now = new Date().toLocaleString('en-US', { weekday:'short', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', year:'numeric' });
+  bar.textContent  = `Ubuntu 22.04.3 LTS forensics-lab tty1`;
+  line1.textContent = `\nBroadcast message from root@forensics-lab:\nThe system has rebooted — ${now}\n`;
+  hint.textContent  = `Password format: DDMMYYYY`;
+
+  err.classList.remove('visible');
+  inp.value = '';
+  el.classList.remove('hidden', 'ls-fade-out');
+
+  setTimeout(() => inp.focus(), 80);
+
+  function onKey(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (inp.value === _loginPassword()) {
+      inp.removeEventListener('keydown', onKey);
+      el.classList.add('ls-fade-out');
+      setTimeout(() => {
+        el.classList.add('hidden');
+        el.classList.remove('ls-fade-out');
+        onSuccess();
+      }, 300);
+    } else {
+      err.classList.add('visible');
+      inp.value = '';
+      setTimeout(() => err.classList.remove('visible'), 2000);
+    }
+  }
+  inp.addEventListener('keydown', onKey);
 }
 
 // ── New Session ──────────────────────────────────

@@ -366,6 +366,109 @@ const CMDS = {
     return [`<span class="red">ls: cannot access '${path}': No such file or directory</span>`, ''];
   },
 
+  // ── ls -la ──
+  lsLong(sc, path) {
+    path = (path || '').replace(/\/$/, '');
+    const D = [
+      'May 01','May 03','May 07','May 09','May 11','May 14','May 15','May 17',
+    ];
+    let di = 0;
+    const ts = () => D[di++ % D.length];
+
+    if (!path || path === '.' || path === '/root' || path === '~') {
+      return [
+        '', '<span class="dim">total 48</span>',
+        `<span class="dim">drwx------  5 root root 4096 ${ts()} <span class="blue">.</span></span>`,
+        `<span class="dim">drwxr-xr-x 20 root root 4096 ${ts()} <span class="blue">..</span></span>`,
+        `<span class="dim">-rw-r--r--  1 root root  220 ${ts()} .bash_logout</span>`,
+        `<span class="dim">-rw-r--r--  1 root root 3526 ${ts()} .bashrc</span>`,
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">captures</span></span>`,
+        `<span class="dim">-rw-------  1 root root  876 ${ts()} .lesshst</span>`,
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">logs</span></span>`,
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">tools</span></span>`,
+        `<span class="dim">-rw-r--r--  1 root root  168 ${ts()} .profile</span>`,
+        '',
+      ];
+    }
+    if (path === '/var/log' || path === '/var/log/') {
+      return [
+        '', '<span class="dim">total 2140</span>',
+        `<span class="green">-rw-r-----  1 syslog adm   87432 ${ts()} auth.log</span>`,
+        `<span class="dim">-rw-r-----  1 syslog adm   12834 ${ts()} auth.log.1</span>`,
+        `<span class="dim">-rw-r-----  1 syslog adm    2301 ${ts()} auth.log.2.gz</span>`,
+        `<span class="dim">drwxr-xr-x  2 www-data root  4096 ${ts()} <span class="blue">nginx</span></span>`,
+        `<span class="dim">-rw-r--r--  1 root root  198234 ${ts()} syslog</span>`,
+        `<span class="dim">-rw-r--r--  1 root root   45128 ${ts()} syslog.1</span>`,
+        `<span class="dim">-rw-r--r--  1 root root    2143 ${ts()} kern.log</span>`,
+        `<span class="dim">-rw-r--r--  1 root root   12893 ${ts()} dpkg.log</span>`,
+        '',
+      ];
+    }
+    if (path.startsWith('/tmp')) {
+      const base = [
+        '', '<span class="dim">total 24</span>',
+        `<span class="dim">drwxrwxrwt  6 root root   4096 ${ts()} <span class="blue">.</span></span>`,
+        `<span class="dim">drwxr-xr-x 20 root root   4096 ${ts()} <span class="blue">..</span></span>`,
+        `<span class="dim">drwx------  2 root root   4096 ${ts()} <span class="blue">systemd-private-7a3bc</span></span>`,
+        `<span class="dim">drwx------  2 root root   4096 ${ts()} <span class="blue">tmux-0</span></span>`,
+      ];
+      if (sc.check === 'cryptominer') { base.push(`<span class="red">drwxr-xr-x  2 nobody nogroup 4096 ${ts()} <span class="red bold">.xmr</span></span>`, '<span class="red bold">[!] diretório oculto .xmr/ com SUID — investigue: ls -la /tmp/.xmr</span>'); }
+      if (sc.check === 'ransomware')  { base.push(`<span class="red">drwxr-xr-x  2 root root   4096 ${ts()} <span class="red bold">.crypt</span></span>`); }
+      if (sc.check === 'botnet_c2')   { base.push(`<span class="red">drwxr-xr-x  2 nobody nogroup 4096 ${ts()} <span class="red bold">.agent</span></span>`); }
+      if (sc.check === 'webshell')    { base.push(`<span class="red">-rwxr-xr-x  1 www-data www-data 4120 ${ts()} <span class="red bold">shell.php</span></span>`); }
+      if (sc.check === 'reverse_shell') { base.push(`<span class="red">-rwx------  1 www-data www-data 8241 ${ts()} <span class="red bold">.sh</span></span>`); }
+      base.push('');
+      return base;
+    }
+    if (path.startsWith('/etc')) {
+      return [
+        '', '<span class="dim">total 256</span>',
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">apache2</span></span>`,
+        `<span class="dim">-rw-r--r--  1 root root  722 ${ts()} crontab</span>`,
+        `<span class="dim">-rw-r--r--  1 root root 1491 ${ts()} group</span>`,
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">nginx</span></span>`,
+        `<span class="dim">-rw-r--r--  1 root root 2812 ${ts()} passwd</span>`,
+        `<span class="dim">-rw-------  1 root root 1342 ${ts()} shadow</span>`,
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">ssh</span></span>`,
+        `<span class="dim">drwxr-xr-x  2 root root 4096 ${ts()} <span class="blue">systemd</span></span>`,
+        '',
+      ];
+    }
+    if (path.startsWith('/var/log/nginx')) {
+      return [
+        '', '<span class="dim">total 1284</span>',
+        `<span class="green">-rw-r--r--  1 www-data adm  482341 ${ts()} access.log</span>`,
+        `<span class="dim">-rw-r--r--  1 www-data adm   92841 ${ts()} access.log.1</span>`,
+        `<span class="dim">-rw-r--r--  1 www-data adm    4312 ${ts()} error.log</span>`,
+        '',
+      ];
+    }
+    return CMDS.lsPath(sc, path);
+  },
+
+  // ── grep -r (recursive across log files) ──
+  grepRecursive(sc, pattern, dir) {
+    const files = {
+      '/var/log/auth.log':         CMDS.auth_log(sc),
+      '/var/log/nginx/access.log': CMDS.nginx_log(sc),
+      '/var/log/syslog':           CMDS.syslog(sc),
+    };
+    function stripHtml(h) { return String(h).replace(/<[^>]+>/g, ''); }
+    let re;
+    try { re = new RegExp(pattern, 'i'); } catch(e) { re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'); }
+    const results = [];
+    for (const [fname, lines] of Object.entries(files)) {
+      if (!dir || dir === '/' || fname.startsWith(dir) || dir.startsWith('/var') || dir.startsWith('/root')) {
+        lines.forEach(l => {
+          if (l && re.test(stripHtml(l))) {
+            results.push(`<span class="fp-path">${fname}:</span>${l}`);
+          }
+        });
+      }
+    }
+    return results.length ? ['', ...results, ''] : ['<span class="dim">(sem resultados)</span>', ''];
+  },
+
   // ── find ──
   find(sc, args) {
     const raw = args.join(' ');
@@ -572,10 +675,14 @@ const ALL_CMD_NAMES = [
   'help', 'status', 'top', 'htop', 'ps aux', 'netstat -an', 'ss -s', 'tcpdump -n -c 15',
   'iftop', 'nload', 'nethogs', 'vmstat', 'iostat', 'dmesg | tail',
   'tail -f /var/log/nginx/access.log', 'tail -f /var/log/auth.log', 'tail -f /var/log/syslog',
-  'grep', 'iptables -nvL', 'nmap', 'whois', 'geoip', 'abuse', 'dig', 'bgp', 'traceroute',
+  'tail -n 20 /var/log/auth.log', 'tail -n 50 /var/log/nginx/access.log',
+  'grep', 'grep -r', 'grep -v', 'iptables -nvL', 'nmap', 'whois', 'geoip', 'abuse', 'dig', 'bgp', 'traceroute',
   'cat /etc/crontab', 'cat /etc/passwd', 'cat /proc/cpuinfo', 'cat /tmp/.xmr/config.json',
-  'ls /var/log', 'ls /tmp', 'ls /etc', 'find /tmp -type f',
-  'cd /tmp', 'cd /var/log', 'cd /etc', 'pwd',
+  'ls /var/log', 'ls /tmp', 'ls /etc', 'ls -la', 'ls -la /tmp', 'ls -la /var/log', 'ls -la /etc',
+  'find /tmp -type f', 'find / -mtime -1', 'find / -perm -4000',
+  'cd /tmp', 'cd /var/log', 'cd /etc', 'cd /root', 'pwd',
+  'kill', 'pkill', 'rm -rf',
+  'wc -l', 'sort', 'sort -r', 'uniq -c',
   'hint', 'playbook', 'note adicionar', 'notes', 'ioc', 'report', 'timeline', 'score',
   'history', 'clear', 'whoami', 'uname', 'ls', 'uptime', 'df', 'free',
 ];

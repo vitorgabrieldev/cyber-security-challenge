@@ -233,15 +233,42 @@ Os cenários abaixo já existem parcialmente no código (aparecem em `ps aux` e 
 
 | Item | Status |
 |---|---|
-| Pipe `\|` | ⬜ Pendente |
-| `last` / `lsof` | ⬜ Pendente |
-| `ls -la` | ⬜ Pendente |
-| `cd` muda prompt | ⬜ Pendente |
-| `kill` / `rm -rf` | ⬜ Pendente |
-| Cenários incompletos (6) | ⬜ Pendente |
-| Lógica de resolução | ⬜ Pendente |
-| Desktop Kali | ⬜ Pendente |
-| `access.txt` no desktop | ⬜ Pendente |
-| Pasta `investigation/` | ⬜ Pendente |
-| Remoção da sidebar | ⬜ Pendente |
-| `new-session` com confirmação | ⬜ Pendente |
+| Desktop Kali (wallpaper, janelas flutuantes) | ✅ Feito |
+| Barra superior com ícones estilo Kali | ✅ Feito |
+| `access.txt` no desktop | ✅ Feito |
+| Pasta `investigation/` com arquivos .txt | ✅ Feito |
+| Terminal como janela flutuante e arrastável | ✅ Feito |
+| Múltiplos terminais + abas (panes) | ✅ Feito |
+| Remoção da sidebar | ✅ Feito |
+| App launcher (menu de aplicativos) | ✅ Feito |
+| Taskbar inferior com janelas minimizadas | ✅ Feito |
+| localStorage 100% (reload preserva tudo) | ✅ Feito |
+| Ctrl+C cancela comandos live | ✅ Feito |
+| Auto-scroll no terminal | ✅ Feito |
+| Prompt Kali two-line (`┌──(root㉿kali)`) | ✅ Feito |
+| Pipe `\|` (ex: `ps aux \| grep xmrig`) | ✅ Feito |
+| `ls -la` com permissões e timestamps | ✅ Feito |
+| `cd` muda o prompt corretamente | ✅ Feito |
+| `kill` / `pkill` / `rm -rf` (remediação) | ✅ Feito |
+| `grep -r` recursivo | ✅ Feito |
+| `tail -n <N>` configurável | ✅ Feito |
+| `wc -l` / `sort -r` / `uniq -c` | ✅ Feito |
+| Timing variável: `nmap` 3-5s, `find` 1-2s | ✅ Feito |
+| SSH `Connection timeout — retrying...` ocasional | ✅ Feito |
+| `last` / `lsof -i` | ⬜ Pendente |
+| `iptables` / `fail2ban` / `sysctl` | ⬜ Pendente |
+| `journalctl -xe` / `systemctl status` | ⬜ Pendente |
+| `find` com `-perm` / `-mtime` | ⬜ Pendente |
+| `strings` / `file` / `md5sum` / `sha256sum` | ⬜ Pendente |
+| `env` / `ausearch` / `aureport` | ⬜ Pendente |
+| Cenário `ransomware` (completo) | ⬜ Pendente |
+| Cenário `webshell` (completo) | ⬜ Pendente |
+| Cenário `botnet_c2` (completo) | ⬜ Pendente |
+| Cenário `rootkit` (completo) | ⬜ Pendente |
+| Cenário `reverse_shell` (completo) | ⬜ Pendente |
+| Cenário `log_wipe` (completo) | ⬜ Pendente |
+| Lógica de "resolver o incidente" | ⬜ Pendente |
+| Validação de sequência de remediação | ⬜ Pendente |
+| Feedback de resolução + reinício parcial | ⬜ Pendente |
+| `new-session` com confirmação via terminal | ⬜ Pendente |
+| Timing variável por comando (nmap, find...) | ✅ Feito |

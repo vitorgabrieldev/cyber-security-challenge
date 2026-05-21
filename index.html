@@ -166,6 +166,21 @@
   <!-- Toast notification container -->
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- TTY Login Screen (shown after reboot) -->
+  <div class="login-screen hidden" id="login-screen">
+    <div class="ls-tty-bar" id="ls-tty-bar">Ubuntu 22.04.3 LTS forensics-lab tty1</div>
+    <div class="ls-block">
+      <div class="ls-line" id="ls-line1"></div>
+      <div class="ls-line" id="ls-line2">forensics-lab login: <span class="ls-user">root</span></div>
+      <div class="ls-pwd-row">
+        <span>Password: </span>
+        <input id="ls-pwd" type="password" class="ls-pwd-input" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="ls-error" id="ls-error">Login incorrect</div>
+    </div>
+    <div class="ls-hint" id="ls-hint"></div>
+  </div>
+
   <!-- Mobile fallback -->
   <div class="mobile-msg" id="mobile-msg">
     <p>CyberSec Lab requer um navegador desktop.</p>

@@ -237,8 +237,9 @@ function _restorePane(win, sp) {
   const getPrompt = () => {
     if (pane.passwordMode) return { pre: null, prompt: '' };
     if (!pane.sshConnected) {
+      const localDir = pane.cwd === '/root' ? '~' : pane.cwd;
       return {
-        pre:    `<span class="kp-bracket">┌──(</span><span class="kp-user">root㉿kali</span><span class="kp-bracket">)-[</span><span class="kp-path">~</span><span class="kp-bracket">]</span>`,
+        pre:    `<span class="kp-bracket">┌──(</span><span class="kp-user">root㉿kali</span><span class="kp-bracket">)-[</span><span class="kp-path">${localDir}</span><span class="kp-bracket">]</span>`,
         prompt: `<span class="kp-arrow">└─</span><span class="kp-hash"># </span>`,
       };
     }
