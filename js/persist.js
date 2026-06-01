@@ -22,7 +22,6 @@ function persistState() {
       v: 1,
       scenarioKey: scenario?.check || null,
       sessionCreds,
-      wallpaper: document.getElementById('desktop').style.backgroundImage,
       iocs:    [...iocs],
       notes:   [...notes],
       labNotes:[...labNotes],
@@ -55,7 +54,7 @@ function persistState() {
         prevStyle: txtPrevStyle,
         title:   document.getElementById('txtv-title')?.textContent || '',
         fname:   document.getElementById('txtv-fname')?.textContent || '',
-        content: document.getElementById('txtv-body')?.textContent  || '',
+        content: document.getElementById('txtv-body')?.value  || '',
       } : null,
       filemgr: fmgrEl ? {
         visible: fmgrEl.style.display === 'flex',
@@ -93,11 +92,7 @@ function restoreState() {
     winZCounter      = s.winZCounter  || 100;
     focusedWinId     = s.focusedWinId || null;
 
-    if (s.wallpaper) {
-      document.getElementById('desktop').style.backgroundImage = s.wallpaper;
-    } else {
-      setRandomWallpaper();
-    }
+    setRandomWallpaper();
 
     if (s.windows?.length > 0) {
       s.windows.forEach(sw => _restoreTermWindow(sw));
@@ -113,7 +108,7 @@ function restoreState() {
       el.style.display = 'flex';
       document.getElementById('txtv-title').textContent = s.txtv.title;
       document.getElementById('txtv-fname').textContent = s.txtv.fname;
-      document.getElementById('txtv-body').textContent  = s.txtv.content;
+      document.getElementById('txtv-body').value  = s.txtv.content;
       txtMaximized = s.txtv.maximized || false;
       txtPrevStyle = s.txtv.prevStyle || '';
     }

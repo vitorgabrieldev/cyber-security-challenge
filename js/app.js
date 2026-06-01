@@ -8,6 +8,12 @@ let timelineRevealed = new Set(['none']);
 let timerSec = 0, timerInt = null;
 let sessionCreds = null;
 
+// ── System tray state ───────────────────────────
+let wifiEnabled = true;
+let perfMode = 'balanced';
+let btEnabled = true;
+let btConnecting = false;
+
 // ── Window management ───────────────────────────
 const WINDOWS = [];
 let focusedWinId = null;
@@ -113,6 +119,7 @@ function hideCtxMenu() { document.getElementById('ctx-menu').classList.add('hidd
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.ctx-menu'))   hideCtxMenu();
   if (!e.target.closest('.app-launcher') && !e.target.closest('#kp-applications')) closeAppLauncher();
+  if (!e.target.closest('.sys-tray-modal') && !e.target.closest('.kp-tray-btn')) closeSysTray();
 });
 
 // ── App Launcher ────────────────────────────────
@@ -192,7 +199,7 @@ function openFileTxt(type) {
   }
   document.getElementById('txtv-title').textContent = `Mousepad — ${title}`;
   document.getElementById('txtv-fname').textContent = title;
-  document.getElementById('txtv-body').textContent = content;
+  document.getElementById('txtv-body').value = content;
   _showTxtWindow();
 }
 
@@ -636,8 +643,16 @@ async function handleConfirmInput(val, action, pane) {
   const t = pane.term;
   if (['s','sim','y','yes'].includes(val)) {
     if (action === 'new-session') {
-      await t.printLines(['<span class="dim">encerrando sessão...</span>', ''], 0, 30);
-      setTimeout(() => doNewSession(), 600);
+      await t.printLines([
+        '',
+        `<span class="yellow">Broadcast message from root@forensics-lab (pts/0):</span>`,
+        `<span class="yellow">The system is going down for reboot NOW!</span>`,
+        '',
+        `<span class="dim">Connection to ${sessionCreds?.ip || '10.0.0.1'} closed.</span>`,
+        '',
+      ], 0, 40);
+      await new Promise(r => setTimeout(r, 1100));
+      showLoginScreen(() => doNewSession());
     }
   } else {
     await t.printLines(['<span class="dim">operação cancelada.</span>', '']);
@@ -697,14 +712,12 @@ async function runCmdOnPane(rawInput, pane) {
     if (c === 'reboot' || c === 'new-session' || c === 'reset') {
       await t.printLines([
         '',
-        `<span class="yellow">Broadcast message from root@forensics-lab (pts/0):</span>`,
-        `<span class="yellow">The system is going down for reboot NOW!</span>`,
-        '',
-        `<span class="dim">Connection to ${sessionCreds?.ip || '10.0.0.1'} closed.</span>`,
+        '<span class="yellow">[!] Isso encerrará a sessão atual sem salvar.</span>',
+        '<span class="dim">Tem certeza? [s/N]: </span>',
         '',
       ], 0, 40);
-      await new Promise(r => setTimeout(r, 1200));
-      showLoginScreen(() => doNewSession());
+      pane.confirmPending = 'new-session';
+      t.createInputLine(makeOnKey(pane));
       return;
     }
 
@@ -1158,6 +1171,13 @@ async function handleKaliCmd(c, args, raw, pane) {
     const match  = target.match(/^(?:(\S+)@)?(\S+?)(?:\s|$)/);
     const user   = match?.[1] || 'root';
     const host   = match?.[2] || '';
+    if (!wifiEnabled) {
+      await new Promise(r => setTimeout(r, 700));
+      await t.appendLine(`<span class="red">ssh: connect to host ${esc(host||'host')} port 22: Network unreachable</span>`);
+      await t.appendLine(`<span class="dim">Dica: ative o Wi-Fi no painel superior</span>`);
+      t.createInputLine(makeOnKey(pane));
+      return;
+    }
     if (host === sessionCreds.ip || host === 'forensics-lab') {
       if (user !== sessionCreds.user) {
         await t.appendLine(`<span class="red">${user}@${host}: Permission denied (publickey,password).</span>`);
@@ -1584,9 +1604,7 @@ function showLoginScreen(onSuccess) {
 
 // ── New Session ──────────────────────────────────
 function triggerNewSession() {
-  if (confirm('Iniciar novo cenário? A sessão atual será encerrada sem salvar.')) {
-    doNewSession();
-  }
+  showLoginScreen(() => doNewSession());
 }
 function doNewSession() {
   clearSavedState();
@@ -1600,6 +1618,7 @@ function doNewSession() {
 
   [...WINDOWS].forEach(w => closeTermWindow(w.id));
   setRandomWallpaper();
+  initDesktopIcons();
 
   const win = openTerminalWindow();
   updateTaskbar();
@@ -1714,16 +1733,87 @@ function initFloatingWindows() {
   if (t2 && w2) makeDraggable(w2, t2);
 }
 
-// ── Left desktop icons ───────────────────────────
-const LEFT_ICON_POOL = [
-  { gfx: '📁', name: 'wordlists',        action: () => showToast('wordlists/', '/usr/share/wordlists/ — rockyou.txt.gz, dirb', 'info') },
-  { gfx: '📁', name: 'captures',         action: () => showToast('captures/', '/root/captures — arquivos .pcap', 'info') },
-  { gfx: '📄', name: 'targets.txt',      action: () => openExtraFileTxt('targets') },
-  { gfx: '📄', name: 'scan-results.txt', action: () => openExtraFileTxt('scan') },
-  { gfx: '📁', name: 'tools',            action: () => showToast('tools/', '/root/tools — scripts custom de pentest', 'info') },
-  { gfx: '📄', name: 'vuln-notes.txt',   action: () => openExtraFileTxt('vulnnotes') },
-  { gfx: '📁', name: '.local',           action: () => showToast('.local/', 'Arquivos ocultos de configuração local', 'info') },
-  { gfx: '📄', name: 'recon.txt',        action: () => openExtraFileTxt('recon') },
+// ── App icon pool (random desktop population) ────
+const APP_POOL = [
+  // Social / Messaging
+  { name: 'Discord',      cat: 'social', pkg: 'discord_0.0.62_amd64.deb',                 gfx: '<i class="fab fa-discord"           style="font-size:30px;color:#5865F2"></i>' },
+  { name: 'Messenger',    cat: 'social', pkg: 'messenger_228.0.0_amd64.deb',              gfx: '<i class="fab fa-facebook-messenger" style="font-size:30px;color:#0099FF"></i>' },
+  { name: 'Snapchat',     cat: 'social', pkg: 'snapchat_7.2.1_amd64.deb',                 gfx: '<i class="fab fa-snapchat"          style="font-size:30px;color:#FFFC00"></i>' },
+  { name: 'Rocket.Chat',  cat: 'social', pkg: 'rocketchat-desktop_6.5.1_amd64.deb',       gfx: '<i class="fab fa-rocketchat"        style="font-size:30px;color:#F5455C"></i>' },
+  { name: 'Bluesky',      cat: 'social', pkg: 'bluesky_1.82.0_amd64.deb',                 gfx: '<i class="fab fa-square-bluesky"    style="font-size:30px;color:#0085FF"></i>' },
+  // Gaming
+  { name: 'Steam',        cat: 'game',   pkg: 'steam_1.0.0.79_amd64.deb',                 gfx: '<i class="fab fa-steam"             style="font-size:30px;color:#c2c2c2"></i>' },
+  { name: 'GTA V',        cat: 'game',   pkg: 'GTAV_Launcher_v2.0.18.exe',                gfx: '<img src="backgrounds/apps/gta5.jpeg" class="d-icon-png">' },
+  { name: 'Minecraft',    cat: 'game',   pkg: 'Minecraft_1.20.4_amd64.deb',               gfx: '<img src="backgrounds/apps/minecraft.jpg" class="d-icon-png">' },
+  { name: 'Terraria',     cat: 'game',   pkg: 'terraria_1.4.4.9_amd64.deb',               gfx: '<img src="backgrounds/apps/terraria.png" class="d-icon-png">' },
+  // Dev
+  { name: 'VS Code',      cat: 'dev',    pkg: 'code_1.87.2-1709912201_amd64.deb',         gfx: '<img src="backgrounds/apps/visualstudio.png" class="d-icon-png">' },
+  { name: 'Postman',      cat: 'dev',    pkg: 'postman_10.23.6_amd64.deb',                gfx: '<img src="backgrounds/apps/postman.png" class="d-icon-png">' },
+  { name: 'FileZilla',    cat: 'dev',    pkg: 'filezilla_3.66.4_amd64.deb',               gfx: '<img src="backgrounds/apps/filezilla.jpeg" class="d-icon-png">' },
+  // Media
+  { name: 'Spotify',      cat: 'media',  pkg: 'spotify_1.2.40_amd64.deb',                 gfx: '<img src="backgrounds/apps/spotify.png" class="d-icon-png">' },
+  // Productivity
+  { name: 'Calendar',     cat: 'prod',   pkg: 'gnome-calendar_46.0-1_amd64.deb',          gfx: '<i class="fas fa-calendar-check"    style="font-size:28px;color:#4CAF50"></i>' },
+  { name: 'Mousepad',     cat: 'prod',   pkg: 'mousepad_0.6.1-1_amd64.deb',              gfx: '<i class="fas fa-file-lines"        style="font-size:28px;color:#7B9EC9"></i>' },
+  { name: 'Calculator',   cat: 'prod',   pkg: 'gnome-calculator_46.0_amd64.deb',          gfx: '<i class="fas fa-calculator"        style="font-size:26px;color:#888"></i>' },
+  // Kali Linux security tools
+  { name: 'Wireshark',    cat: 'kali',   pkg: 'wireshark_4.2.3_amd64.deb',               gfx: '<i class="fas fa-fish"              style="font-size:28px;color:#1BA0E1"></i>' },
+  { name: 'Burp Suite',   cat: 'kali',   pkg: 'burpsuite_2024.1.1_amd64.deb',            gfx: '<i class="fas fa-bug"               style="font-size:28px;color:#FF6633"></i>' },
+  { name: 'Metasploit',   cat: 'kali',   pkg: 'metasploit-framework_6.3.55_amd64.deb',   gfx: '<i class="fas fa-crosshairs"        style="font-size:28px;color:#E84040"></i>' },
+  { name: 'Nmap',         cat: 'kali',   pkg: 'nmap_7.94_amd64.deb',                      gfx: '<i class="fas fa-network-wired"     style="font-size:26px;color:#00B8D4"></i>' },
+  { name: 'Hashcat',      cat: 'kali',   pkg: 'hashcat_6.2.6_amd64.deb',                 gfx: '<i class="fas fa-key"               style="font-size:28px;color:#FFC107"></i>' },
+  { name: 'John',         cat: 'kali',   pkg: 'john_1.9.0-jumbo_amd64.deb',              gfx: '<i class="fas fa-lock-open"         style="font-size:28px;color:#9C27B0"></i>' },
+  { name: 'Hydra',        cat: 'kali',   pkg: 'hydra_9.5-1_amd64.deb',                   gfx: '<i class="fas fa-bolt"              style="font-size:28px;color:#F44336"></i>' },
+  { name: 'SQLmap',       cat: 'kali',   pkg: 'sqlmap_1.8.2_amd64.deb',                  gfx: '<i class="fas fa-database"          style="font-size:26px;color:#FF7043"></i>' },
+  { name: 'Tor Browser',  cat: 'kali',   pkg: 'tor_0.4.8.11_amd64.deb',                  gfx: '<i class="fas fa-circle-nodes"      style="font-size:26px;color:#7D4698"></i>' },
+  { name: 'Aircrack-ng',  cat: 'kali',   pkg: 'aircrack-ng_1.7-1_amd64.deb',             gfx: '<i class="fas fa-wifi"              style="font-size:26px;color:#4CAF50"></i>' },
+  { name: 'Gobuster',     cat: 'kali',   pkg: 'gobuster_3.6.0_amd64.deb',                gfx: '<i class="fas fa-magnifying-glass"  style="font-size:26px;color:#26C6DA"></i>' },
+  { name: 'Ghidra',       cat: 'kali',   pkg: 'ghidra_11.0.1_amd64.deb',                 gfx: '<i class="fas fa-dragon"            style="font-size:28px;color:#FF5722"></i>' },
+  { name: 'Nikto',        cat: 'kali',   pkg: 'nikto_2.1.6_amd64.deb',                   gfx: '<i class="fas fa-spider"            style="font-size:28px;color:#8BC34A"></i>' },
+  { name: 'Volatility',   cat: 'kali',   pkg: 'volatility3_2.5.2_amd64.deb',             gfx: '<i class="fas fa-memory"            style="font-size:26px;color:#00BCD4"></i>' },
+  // Folders
+  { name: 'Documents',    cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'Downloads',    cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'Pictures',     cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'Videos',       cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'Music',        cat: 'folder', pkg: null, gfx: '📁' },
+  { name: '.config',      cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'scripts',      cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'projects',     cat: 'folder', pkg: null, gfx: '📁' },
+  { name: '.ssh',         cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'backup-2024',  cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'wordlists',    cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'captures',     cat: 'folder', pkg: null, gfx: '📁' },
+  { name: 'tools',        cat: 'folder', pkg: null, gfx: '📁' },
+  // Files
+  { name: 'notes.md',     cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'TODO.txt',     cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'passwd.bak',   cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'vpn.conf',     cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'id_rsa',       cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'keys.txt',     cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'report.pdf',   cat: 'file',   pkg: null, gfx: '📄' },
+  { name: '.env',         cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'creds.csv',    cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'scan.xml',     cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'targets.txt',  cat: 'file',   pkg: null, gfx: '📄' },
+  { name: 'recon.txt',    cat: 'file',   pkg: null, gfx: '📄' },
+];
+
+// Layout patterns: cols=columns, count=[min,max], cats=allowed categories (optional)
+const LAYOUT_PATTERNS = [
+  { cols: 1, count: [4, 7]  },                                                        // coluna organizada
+  { cols: 2, count: [8, 14] },                                                        // grade 2 colunas mista
+  { cols: 1, count: [2, 4]  },                                                        // minimalista
+  { cols: 3, count: [12, 20] },                                                       // 3 colunas lotadas
+  { cols: 2, count: [6, 10], cats: ['folder', 'file'] },                              // pastas e arquivos
+  { cols: 2, count: [6, 10], cats: ['social','game','media','dev','prod'] },          // apps pessoais
+  { cols: 1, count: [5, 9],  cats: ['kali'] },                                        // ferramentas kali
+  { cols: 2, count: [6, 12], cats: ['kali', 'dev'] },                                 // grade ferramentas
+  { cols: 1, count: [3, 6],  cats: ['social', 'game', 'media'] },                    // entretenimento
+  { cols: 2, count: [4, 8],  cats: ['folder'] },                                      // só pastas
+  { cols: 3, count: [9, 15], cats: ['kali', 'dev', 'prod'] },                         // ambiente de trabalho
+  { cols: 2, count: [10, 18] },                                                       // grade grande mista
 ];
 
 function openExtraFileTxt(type) {
@@ -1747,7 +1837,7 @@ function openExtraFileTxt(type) {
   }
   document.getElementById('txtv-title').textContent = `Mousepad — ${title}`;
   document.getElementById('txtv-fname').textContent = title;
-  document.getElementById('txtv-body').textContent  = content;
+  document.getElementById('txtv-body').value  = content;
   _showTxtWindow();
 }
 
@@ -1756,31 +1846,49 @@ function initDesktopIcons() {
   if (!container) return;
   container.innerHTML = '';
 
-  // Fixed icons always present
-  const fixed = [
-    { gfx: '📁', name: 'forensics-kit', action: () => showToast('forensics-kit/', '/root/forensics-kit — IR toolkit (volatility, yara, binwalk)', 'info') },
-    { gfx: '📄', name: 'README.txt',    action: () => openExtraFileTxt('readme') },
-  ];
+  // Random layout pattern
+  const pat  = LAYOUT_PATTERNS[Math.floor(Math.random() * LAYOUT_PATTERNS.length)];
+  const minN = pat.count[0], maxN = pat.count[1];
+  const n    = minN + Math.floor(Math.random() * (maxN - minN + 1));
 
-  // Pick 1–2 random extras that vary per reload
-  const pool = [...LEFT_ICON_POOL];
-  const n = 1 + Math.floor(Math.random() * 2);
-  const extras = [];
-  for (let i = 0; i < n; i++) {
-    const idx = Math.floor(Math.random() * pool.length);
-    extras.push(pool.splice(idx, 1)[0]);
+  // Apply column CSS
+  container.className  = 'desktop-icons';
+  container.id         = 'desktop-icons-left';
+  if (pat.cols === 2) container.classList.add('cols-2');
+  else if (pat.cols === 3) container.classList.add('cols-3');
+
+  // Filter pool by category if pattern restricts
+  let pool = [...APP_POOL];
+  if (pat.cats) {
+    const filtered = pool.filter(a => pat.cats.includes(a.cat));
+    if (filtered.length >= minN) pool = filtered;
   }
 
-  [...fixed, ...extras].forEach(icon => {
+  // Pick n unique icons without repetition
+  const picked = [];
+  const seen   = new Set();
+  const scratch = [...pool];
+  while (picked.length < n && scratch.length > 0) {
+    const idx = Math.floor(Math.random() * scratch.length);
+    const app = scratch.splice(idx, 1)[0];
+    if (!seen.has(app.name)) { picked.push(app); seen.add(app.name); }
+  }
+
+  // Render
+  picked.forEach(app => {
     const div = document.createElement('div');
     div.className = 'd-icon';
-    div.title = `${icon.name} — double-click to open`;
-    div.addEventListener('dblclick', icon.action);
-    div.innerHTML = `<div class="d-icon-gfx">${icon.gfx}</div><div class="d-icon-name">${icon.name}</div>`;
+    div.title = app.name;
+    div.addEventListener('dblclick', () => openApp(app.name, app.pkg));
+    const isImg = app.gfx.startsWith('<img');
+    const gfxHtml = isImg
+      ? `<div class="d-icon-gfx">${app.gfx}</div>`
+      : `<div class="d-icon-gfx-bg">${app.gfx}</div>`;
+    div.innerHTML = `${gfxHtml}<div class="d-icon-name">${app.name}</div>`;
     container.appendChild(div);
   });
 
-  // Re-attach mousedown stop-propagation for newly added icons
+  // Selection mousedown
   container.querySelectorAll('.d-icon').forEach(icon => {
     icon.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
@@ -1788,6 +1896,280 @@ function initDesktopIcons() {
       if (!e.shiftKey) document.querySelectorAll('.d-icon.selected').forEach(el => el.classList.remove('selected'));
       icon.classList.add('selected');
     });
+  });
+}
+
+// ── App open simulation ──────────────────────────
+function openApp(name, pkg) {
+  document.body.classList.add('cursor-wait');
+
+  // Add loading button to taskbar
+  const taskBtn = document.createElement('button');
+  taskBtn.className = 'kt-app-btn kt-app-loading';
+  const tIcon = pkg?.endsWith('.exe') ? '🍷' : (pkg ? '📦' : '📁');
+  taskBtn.innerHTML = `<span class="kt-loading-pulse"></span><span class="kt-app-icon">${tIcon}</span>${name}`;
+  document.getElementById('kt-apps').appendChild(taskBtn);
+
+  let delay = 2200 + Math.random() * 2200;
+  if (perfMode === 'performance') delay /= 3;
+
+  setTimeout(() => {
+    document.body.classList.remove('cursor-wait');
+    taskBtn.remove();
+    let title, msg;
+    if (pkg && pkg.endsWith('.deb')) {
+      title = `Erro ao instalar ${pkg.split('_')[0]}`;
+      msg   = [
+        `(Reading database ... 312847 files installed)`,
+        `Preparing to unpack .../Downloads/${pkg} ...`,
+        `dpkg: error processing archive /root/Downloads/${pkg}:`,
+        ` subprocess dpkg-deb --control returned error exit status 2`,
+        `dpkg-deb: error: paste subprocess was killed by signal (Broken pipe)`,
+        `Errors were encountered while processing:`,
+        ` /root/Downloads/${pkg}`,
+        `E: Sub-process /usr/bin/dpkg returned an error code (1)`,
+      ].join('\n');
+    } else if (pkg && pkg.endsWith('.exe')) {
+      title = `Wine — Erro ao abrir ${name}`;
+      const picks = [
+        `wine: could not load ${pkg}:\n 0009:err:module:import_dll Library MSVCP140.dll not found\n 0009:err:module:LdrInitializeThunk Importing dlls for L"${pkg}" failed, status c0000135`,
+        `wine: Unhandled exception 0xe0434352 at address 0x7b43a390 (thread 0029), starting debugger...\nUnhandled exception: System.IO.FileNotFoundException\nFile not found: '${name}' — Wine version 8.0 (Staging)`,
+      ];
+      msg = picks[Math.floor(Math.random() * picks.length)];
+    } else if (!pkg) {
+      // folder or plain file
+      const errs = [
+        `(nautilus:${2800 + Math.floor(Math.random()*500)}): Gtk-WARNING **: Failed to realize on realization\nnautilus: [ERROR] could not open location '${name}'\nSegmentation fault (core dumped)`,
+        `xdg-open: no handler found for type 'inode/directory'\nxdg-mime: could not determine mime type for '${name}'\nAborted`,
+        `gio: ${name}: Failed to open — The file does not exist\nError opening file: Input/output error (errno 5)`,
+      ];
+      title = `Não foi possível abrir "${name}"`;
+      msg   = errs[Math.floor(Math.random() * errs.length)];
+    } else {
+      title = `Erro — ${name}`;
+      msg   = `O aplicativo travou na inicialização.\nCódigo de saída: ${Math.floor(Math.random() * 255)}\nSinal: SIGSEGV (core dumped)`;
+    }
+    _showAppErrorDialog(title, msg);
+  }, delay);
+}
+
+function _showAppErrorDialog(title, msg) {
+  document.getElementById('aed-title').textContent = title;
+  document.getElementById('aed-msg').textContent   = msg;
+  document.getElementById('app-error-dialog').classList.remove('hidden');
+}
+
+function closeAppErrorDialog() {
+  document.getElementById('app-error-dialog').classList.add('hidden');
+}
+
+// ── Context menu helpers ─────────────────────────
+function ctxCopy() {
+  const sel = window.getSelection();
+  if (sel && sel.toString().trim()) {
+    navigator.clipboard?.writeText(sel.toString()).catch(() => {});
+    showToast('Copiar', `${sel.toString().length} caractere(s) copiado(s)`, 'info');
+  } else {
+    showToast('Copiar', 'Nenhum texto selecionado', 'warn');
+  }
+}
+
+async function ctxPaste() {
+  hideCtxMenu();
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text) return;
+    const input = document.querySelector('.terminal-inline-input:focus');
+    if (input) {
+      const s = input.selectionStart, e = input.selectionEnd;
+      input.value = input.value.slice(0, s) + text + input.value.slice(e);
+      input.selectionStart = input.selectionEnd = s + text.length;
+    } else {
+      showToast('Colar', 'Nenhum terminal em foco', 'warn');
+    }
+  } catch {
+    showToast('Colar', 'Acesso à área de transferência negado pelo navegador', 'warn');
+  }
+}
+
+function ctxNewFolder() {
+  showToast('Nova Pasta', 'Pasta "Nova Pasta" criada na Área de Trabalho', 'info');
+}
+
+function ctxDisplaySettings() {
+  showToast('Display Settings', 'Resolution: 1920×1080 @ 60Hz  |  Scale: 100%', 'info');
+}
+
+// ── System tray ──────────────────────────────────
+function closeSysTray() {
+  document.querySelectorAll('.sys-tray-modal').forEach(m => m.classList.add('hidden'));
+  document.querySelectorAll('.kp-tray-btn').forEach(b => b.classList.remove('active'));
+}
+
+function toggleSysTray(type, event) {
+  event.stopPropagation();
+  const target = document.getElementById('stm-' + type);
+  const btn    = event.currentTarget;
+  const wasHidden = target.classList.contains('hidden');
+  closeSysTray();
+  if (wasHidden) {
+    target.classList.remove('hidden');
+    btn.classList.add('active');
+  }
+}
+
+function setWifiEnabled(enabled) {
+  wifiEnabled = enabled;
+  const wifiBtn  = document.getElementById('kp-wifi-btn');
+  const netList  = document.getElementById('wifi-networks');
+  const disMsg   = document.getElementById('wifi-disabled-msg');
+  if (wifiBtn) { wifiBtn.style.opacity = ''; enabled ? wifiBtn.classList.remove('wifi-off') : wifiBtn.classList.add('wifi-off'); }
+  if (netList) netList.style.display  = enabled ? '' : 'none';
+  if (disMsg)  disMsg.style.display   = enabled ? 'none' : '';
+  if (!enabled) {
+    // Drop all active SSH sessions
+    WINDOWS.forEach(win => {
+      win.panes.forEach(pane => {
+        if (!pane.sshConnected) return;
+        pane.sshConnected = false;
+        pane.cwd = '/root';
+        if (pane.win?.titleEl) pane.win.titleEl.textContent = 'root@kali: ~';
+        renderWinPaneTabs(pane.win);
+        pane.term.appendLine('');
+        pane.term.appendLine('<span class="red">Conexão encerrada: Network unreachable (Wi-Fi desativado)</span>');
+        pane.term.appendLine('');
+        pane.term.createInputLine(makeOnKey(pane));
+      });
+    });
+    updateTaskbar();
+  }
+}
+
+function setPerfMode(mode) {
+  perfMode = mode;
+  const perfBtn = document.getElementById('kp-perf-btn');
+  const icon    = perfBtn?.querySelector('i');
+  document.querySelectorAll('.stm-perf-opt').forEach(o => o.classList.remove('selected'));
+  document.getElementById('perf-opt-' + mode)?.classList.add('selected');
+  if (mode === 'performance') {
+    if (icon) icon.className = 'fas fa-bolt kp-tray-icon';
+    if (perfBtn) perfBtn.style.color = 'var(--k-yellow)';
+  } else if (mode === 'balanced') {
+    if (icon) icon.className = 'fas fa-battery-half kp-tray-icon';
+    if (perfBtn) perfBtn.style.color = '';
+  } else {
+    if (icon) icon.className = 'fas fa-leaf kp-tray-icon';
+    if (perfBtn) perfBtn.style.color = 'var(--k-green)';
+  }
+}
+
+function updateVolIcon(val) {
+  const icon    = document.getElementById('stm-vol-icon');
+  const label   = document.getElementById('stm-vol-val');
+  const soundBtn = document.getElementById('kp-sound-btn');
+  if (label) label.textContent = val + '%';
+  if (!icon) return;
+  if (val == 0) {
+    icon.className = 'fas fa-volume-xmark';
+    soundBtn?.classList.add('sound-off');
+  } else {
+    icon.className = val < 50 ? 'fas fa-volume-low' : 'fas fa-volume-high';
+    soundBtn?.classList.remove('sound-off');
+  }
+}
+
+function setBtEnabled(enabled) {
+  btEnabled = enabled;
+  const btBtn   = document.getElementById('kp-bt-btn');
+  const devList = document.getElementById('stm-bt-devlist');
+  const loading = document.getElementById('stm-bt-loading');
+  const items   = devList?.querySelectorAll('.stm-dev-item');
+
+  if (!enabled) {
+    btBtn?.classList.add('bt-off');
+    if (devList) devList.style.display = 'none';
+  } else {
+    btBtn?.classList.remove('bt-off');
+    if (devList) devList.style.display = '';
+    loading?.classList.remove('hidden');
+    items?.forEach(d => { d.style.visibility = 'hidden'; });
+    setTimeout(() => {
+      loading?.classList.add('hidden');
+      items?.forEach(d => { d.style.visibility = ''; });
+    }, 1800);
+  }
+}
+
+function btConnect(item) {
+  if (btConnecting || item.classList.contains('stm-net-connected')) return;
+  btConnecting = true;
+  const devList   = document.getElementById('stm-bt-devlist');
+  const iconClass = item.dataset.icon;
+  const name      = item.querySelector('span')?.textContent || 'dispositivo';
+
+  item.classList.remove('bt-error');
+  item.querySelector('.stm-net-badge')?.remove();
+  item.classList.add('connecting');
+
+  setTimeout(() => {
+    item.classList.remove('connecting');
+
+    // ~30% chance of failure
+    if (Math.random() < 0.05) {
+      const i = item.querySelector('i');
+      if (i) i.className = iconClass;
+      item.classList.add('bt-error');
+      const errBadge = document.createElement('span');
+      errBadge.className = 'stm-net-badge stm-bt-err-badge';
+      errBadge.textContent = 'Falha';
+      item.appendChild(errBadge);
+      // Clear error state after 3s so user can retry
+      setTimeout(() => {
+        item.classList.remove('bt-error');
+        errBadge.remove();
+      }, 3000);
+      btConnecting = false;
+      return;
+    }
+
+    // Disconnect current
+    devList.querySelectorAll('.stm-dev-item.stm-net-connected').forEach(d => {
+      d.classList.remove('stm-net-connected');
+      d.querySelector('.stm-net-badge')?.remove();
+      const i = d.querySelector('i');
+      if (i) i.className = d.dataset.icon;
+    });
+
+    // Connect new
+    item.classList.add('stm-net-connected');
+    const i = item.querySelector('i');
+    if (i) i.className = iconClass;
+    const badge = document.createElement('span');
+    badge.className = 'stm-net-badge';
+    badge.textContent = 'Conectado';
+    item.appendChild(badge);
+
+    // Move to top (below the loading indicator)
+    const loading = document.getElementById('stm-bt-loading');
+    devList.insertBefore(item, loading ? loading.nextSibling : devList.firstChild);
+
+    btConnecting = false;
+  }, 1700);
+}
+
+function startWifiSpeedOscillation() {
+  document.querySelectorAll('.stm-net-speed[data-base]').forEach((el, idx) => {
+    const base = parseInt(el.dataset.base);
+    const variance = parseInt(el.dataset.var);
+    function tick() {
+      if (wifiEnabled) {
+        const delta = Math.floor((Math.random() * 2 - 1) * variance);
+        el.textContent = Math.max(1, base + delta) + ' Mbps';
+      }
+      setTimeout(tick, 2000 + Math.random() * 4000);
+    }
+    // Stagger initial ticks so they never fire at the same time
+    setTimeout(tick, idx * 900 + Math.random() * 1200);
   });
 }
 
@@ -1837,6 +2219,7 @@ function init() {
   initFloatingWindows();
   initDesktopIcons();
   startSysInfo();
+  startWifiSpeedOscillation();
 
   const restored = restoreState();
   if (!restored) {

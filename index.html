@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CyberSec Lab — Kali Linux</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%231a1525'/><path d='M16 4L6 9v10l10 6 10-6V9L16 4z' fill='%23268bd2'/></svg>">
 </head>
 <body>
@@ -37,6 +38,14 @@
         <span class="kp-sysinfo" id="kp-disk">DISK —%</span>
         <span class="kp-sep"></span>
         <span class="kp-net" id="kp-net">eth0</span>
+        <span class="kp-sep"></span>
+        <!-- System tray icons -->
+        <div class="kp-tray" id="kp-tray">
+          <button class="kp-tray-btn" id="kp-perf-btn" onclick="toggleSysTray('perf',event)" title="Modo de energia"><i class="fas fa-battery-half kp-tray-icon"></i></button>
+          <button class="kp-tray-btn" id="kp-sound-btn" onclick="toggleSysTray('sound',event)" title="Som"><i class="fas fa-volume-high kp-tray-icon"></i></button>
+          <button class="kp-tray-btn" id="kp-bt-btn" onclick="toggleSysTray('bt',event)" title="Bluetooth"><i class="fab fa-bluetooth kp-tray-icon"></i></button>
+          <button class="kp-tray-btn" id="kp-wifi-btn" onclick="toggleSysTray('wifi',event)" title="Wi-Fi"><i class="fas fa-wifi kp-tray-icon"></i></button>
+        </div>
         <span class="kp-sep"></span>
         <span class="kp-clock" id="kp-clock">00:00:00</span>
         <span class="kp-sep"></span>
@@ -102,7 +111,7 @@
           <div class="txtv-menubar">
             <span>File</span><span>Edit</span><span>View</span><span>Help</span>
           </div>
-          <pre class="txtv-body" id="txtv-body"></pre>
+          <textarea class="txtv-body" id="txtv-body" spellcheck="false" autocomplete="off" autocorrect="off"></textarea>
           <div class="txtv-statusbar">
             <span id="txtv-fname">access.txt</span>
             <span>UTF-8</span><span>Unix (LF)</span>
@@ -153,18 +162,86 @@
 
   <!-- Right-click context menu -->
   <div class="ctx-menu hidden" id="ctx-menu">
-    <div class="ctx-item" onclick="openTerminalWindow(); hideCtxMenu()">Open Terminal Here</div>
-    <div class="ctx-item" onclick="openInvestigationFolder(); hideCtxMenu()">Open Files</div>
+    <div class="ctx-item" onclick="openTerminalWindow(); hideCtxMenu()"><span class="ctx-icon">⬛</span>Open Terminal Here</div>
+    <div class="ctx-item" onclick="openInvestigationFolder(); hideCtxMenu()"><span class="ctx-icon">📁</span>Open Files</div>
     <div class="ctx-sep"></div>
-    <div class="ctx-item" onclick="changeWallpaper(); hideCtxMenu()">Change Wallpaper</div>
+    <div class="ctx-item ctx-dis"><span class="ctx-icon"><i class="fas fa-scissors fa-xs"></i></span>Cut<span class="ctx-kbd">Ctrl+X</span></div>
+    <div class="ctx-item" onclick="ctxCopy(); hideCtxMenu()"><span class="ctx-icon"><i class="fas fa-copy fa-xs"></i></span>Copy<span class="ctx-kbd">Ctrl+C</span></div>
+    <div class="ctx-item" onclick="ctxPaste()"><span class="ctx-icon"><i class="fas fa-paste fa-xs"></i></span>Paste<span class="ctx-kbd">Ctrl+V</span></div>
     <div class="ctx-sep"></div>
-    <div class="ctx-item" onclick="triggerNewSession(); hideCtxMenu()">New Scenario</div>
+    <div class="ctx-item" onclick="ctxNewFolder(); hideCtxMenu()"><span class="ctx-icon">📁</span>New Folder</div>
+    <div class="ctx-item ctx-dis"><span class="ctx-icon">📄</span>New Document<span class="ctx-kbd">Ctrl+N</span></div>
     <div class="ctx-sep"></div>
-    <div class="ctx-item ctx-dim">CyberSec Lab v3.0</div>
+    <div class="ctx-item" onclick="changeWallpaper(); hideCtxMenu()"><span class="ctx-icon">🖼</span>Change Wallpaper</div>
+    <div class="ctx-item" onclick="ctxDisplaySettings(); hideCtxMenu()"><span class="ctx-icon"><i class="fas fa-display fa-xs"></i></span>Display Settings</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item ctx-danger" onclick="triggerNewSession(); hideCtxMenu()"><span class="ctx-icon">↺</span>New Scenario</div>
+  </div>
+
+  <!-- App error dialog (GTK-style) -->
+  <div class="app-error-dialog hidden" id="app-error-dialog">
+    <div class="aed-header">
+      <span class="aed-title" id="aed-title">Erro</span>
+      <button class="aed-close-btn" onclick="closeAppErrorDialog()">✕</button>
+    </div>
+    <div class="aed-body">
+      <div class="aed-icon">⚠</div>
+      <pre class="aed-msg" id="aed-msg"></pre>
+    </div>
+    <div class="aed-footer">
+      <button class="aed-btn aed-btn-secondary" onclick="closeAppErrorDialog()">Enviar Relatório…</button>
+      <button class="aed-btn" onclick="closeAppErrorDialog()">OK</button>
+    </div>
   </div>
 
   <!-- Toast notification container -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- System tray modals -->
+  <div class="sys-tray-modal hidden" id="stm-wifi">
+    <div class="stm-header">
+      <span>Wi-Fi</span>
+      <label class="stm-toggle"><input type="checkbox" id="wifi-toggle" checked onchange="setWifiEnabled(this.checked)"><span class="stm-toggle-slider"></span></label>
+    </div>
+    <div class="stm-net-list" id="wifi-networks">
+      <div class="stm-net-item stm-net-connected"><i class="fas fa-wifi"></i><span>kali-lab-5G</span><span class="stm-net-speed" data-base="480" data-var="45">480 Mbps</span><span class="stm-net-badge">Conectado</span></div>
+      <div class="stm-net-item"><i class="fas fa-wifi"></i><span>DIRECT-73-HP ENVY</span><span class="stm-net-speed" data-base="54" data-var="8">54 Mbps</span></div>
+      <div class="stm-net-item"><i class="fas fa-wifi"></i><span>Vizinho_NET_2G</span><span class="stm-net-speed" data-base="72" data-var="12">72 Mbps</span></div>
+      <div class="stm-net-item"><i class="fas fa-wifi" style="opacity:.4"></i><span style="opacity:.4">FBI_Surveillance_Van</span><span class="stm-net-speed" data-base="11" data-var="2" style="opacity:.4">11 Mbps</span></div>
+    </div>
+    <div id="wifi-disabled-msg" class="stm-row" style="display:none">Wi-Fi desativado</div>
+  </div>
+  <div class="sys-tray-modal hidden" id="stm-bt">
+    <div class="stm-header">
+      <span>Bluetooth</span>
+      <label class="stm-toggle"><input type="checkbox" id="bt-toggle" checked onchange="setBtEnabled(this.checked)"><span class="stm-toggle-slider"></span></label>
+    </div>
+    <div class="stm-net-list" id="stm-bt-devlist">
+      <div class="stm-dev-loading hidden" id="stm-bt-loading"><span class="stm-bt-spinner"></span><span>Procurando dispositivos...</span></div>
+      <div class="stm-dev-item stm-net-connected" data-icon="fas fa-headphones" onclick="btConnect(this)"><i class="fas fa-headphones"></i><span>Galaxy Buds2 Pro</span><span class="stm-net-badge">Conectado</span></div>
+      <div class="stm-dev-item" data-icon="fas fa-keyboard" onclick="btConnect(this)"><i class="fas fa-keyboard"></i><span>Logitech MX Keys</span></div>
+      <div class="stm-dev-item" data-icon="fas fa-computer-mouse" onclick="btConnect(this)"><i class="fas fa-computer-mouse"></i><span>MX Master 3</span></div>
+    </div>
+  </div>
+  <div class="sys-tray-modal hidden" id="stm-sound">
+    <div class="stm-header"><span>Volume</span></div>
+    <div class="stm-slider-row">
+      <i class="fas fa-volume-high" id="stm-vol-icon"></i>
+      <input type="range" min="0" max="100" value="75" class="stm-slider" oninput="updateVolIcon(this.value)">
+      <span class="stm-vol-val" id="stm-vol-val">75%</span>
+    </div>
+    <div class="stm-sep"></div>
+    <div class="stm-row">Saída: <span style="color:var(--panel-text)">Speakers (Built-in Audio)</span></div>
+    <div class="stm-row" style="padding-bottom:10px">Entrada: <span style="color:var(--panel-text)">Internal Microphone</span></div>
+  </div>
+  <div class="sys-tray-modal hidden" id="stm-perf">
+    <div class="stm-header"><span>Modo de Energia</span></div>
+    <div class="stm-perf-list">
+      <div class="stm-perf-opt" id="perf-opt-performance" onclick="setPerfMode('performance')"><i class="fas fa-bolt"></i><div><div class="stm-perf-name">Desempenho</div><div class="stm-perf-desc">Apps abrem 3× mais rápido</div></div></div>
+      <div class="stm-perf-opt selected" id="perf-opt-balanced" onclick="setPerfMode('balanced')"><i class="fas fa-battery-half"></i><div><div class="stm-perf-name">Balanceado</div><div class="stm-perf-desc">Padrão do sistema</div></div></div>
+      <div class="stm-perf-opt" id="perf-opt-saver" onclick="setPerfMode('saver')"><i class="fas fa-leaf"></i><div><div class="stm-perf-name">Economia</div><div class="stm-perf-desc">Menor consumo de energia</div></div></div>
+    </div>
+  </div>
 
   <!-- GDM Login Screen (shown after reboot) -->
   <div class="login-screen hidden" id="login-screen">
